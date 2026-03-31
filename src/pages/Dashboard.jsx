@@ -92,6 +92,30 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     localStorage.setItem(holdingsKey, JSON.stringify(holdings));
   }
 
+  // Technische analyse — draait na elke smart check
+  const runTechnicalAnalysis = useCallback(async (portfolio) => {
+    if (!portfolio || portfolio.length === 0) return;
+    try {
+      const symbols = portfolio.filter(h => !h.isDefensive).map(h => h.symbol);
+      const historyData = await fetchStockHistory(symbols, 3);
+
+      const analyses = {};
+      for (const symbol of symbols) {
+        const closes = historyData[symbol];
+        if (closes && closes.length > 20) {
+          const currentPrice = closes[closes.length - 1];
+          analyses[symbol] = analyzeStock(closes, currentPrice);
+        }
+      }
+      setStockAnalyses(analyses);
+
+      const actions = generateTradeActions(portfolio, analyses);
+      setTradeSignals(actions);
+    } catch {
+      // Historische data niet beschikbaar
+    }
+  }, []);
+
   // Core: fetch data, analyze, and rebalance
   const runSmartCheck = useCallback(async () => {
     try {
@@ -272,30 +296,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
       // Server niet bereikbaar
     }
   }, [settings.amount, settings.risk]);
-
-  // Technische analyse — draait na elke smart check
-  const runTechnicalAnalysis = useCallback(async (portfolio) => {
-    if (!portfolio || portfolio.length === 0) return;
-    try {
-      const symbols = portfolio.filter(h => !h.isDefensive).map(h => h.symbol);
-      const historyData = await fetchStockHistory(symbols, 3);
-
-      const analyses = {};
-      for (const symbol of symbols) {
-        const closes = historyData[symbol];
-        if (closes && closes.length > 20) {
-          const currentPrice = closes[closes.length - 1];
-          analyses[symbol] = analyzeStock(closes, currentPrice);
-        }
-      }
-      setStockAnalyses(analyses);
-
-      const actions = generateTradeActions(portfolio, analyses);
-      setTradeSignals(actions);
-    } catch {
-      // Historische data niet beschikbaar
-    }
-  }, []);
 
   // Snelle price refresh (elke 30 sec) — alleen koersen updaten
   const refreshPrices = useCallback(async () => {
