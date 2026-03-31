@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
+import Profile from './pages/Profile';
 import { supabase, loadUserSettings, saveUserSettings, signOut } from './data/supabase';
 import './App.css';
 
@@ -74,11 +75,6 @@ function App() {
     }
   }
 
-  async function handleReset() {
-    setSettings(null);
-    setPage('onboarding');
-  }
-
   async function handleLogout() {
     await signOut();
     setUser(null);
@@ -113,14 +109,16 @@ function App() {
     return <Assistant onNavigate={handleNavigate} />;
   }
 
+  if (page === 'profile') {
+    return <Profile user={user} onNavigate={handleNavigate} onLogout={handleLogout} />;
+  }
+
   return (
     <Dashboard
       settings={settings}
       user={user}
       onNavigate={handleNavigate}
-      onReset={handleReset}
       onUpdateSettings={handleUpdateSettings}
-      onLogout={handleLogout}
     />
   );
 }

@@ -106,6 +106,10 @@ export default function Assistant({ onNavigate }) {
           <span className="nav-icon">💬</span>
           <span>Assistent</span>
         </button>
+        <button className="nav-btn" onClick={() => onNavigate('profile')}>
+          <span className="nav-icon">👤</span>
+          <span>Profiel</span>
+        </button>
       </div>
     </div>
   );

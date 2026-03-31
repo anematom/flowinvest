@@ -20,7 +20,7 @@ const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
 const CHECK_INTERVAL = 10 * 60 * 1000; // 10 minuten
 const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
-export default function Dashboard({ settings, user, onNavigate, onReset, onUpdateSettings, onLogout }) {
+export default function Dashboard({ settings, user, onNavigate, onUpdateSettings }) {
   const [marketData, setMarketData] = useState(null);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
@@ -591,16 +591,6 @@ export default function Dashboard({ settings, user, onNavigate, onReset, onUpdat
         />
       )}
 
-      {/* Account */}
-      <div className="reset-section">
-        <button className="reset-btn" onClick={onReset}>
-          Opnieuw beginnen
-        </button>
-        <button className="reset-btn" onClick={onLogout}>
-          Uitloggen
-        </button>
-      </div>
-
       {/* Bottom nav */}
       <div className="bottom-nav">
         <button className="nav-btn active" onClick={() => onNavigate('dashboard')}>
@@ -610,6 +600,10 @@ export default function Dashboard({ settings, user, onNavigate, onReset, onUpdat
         <button className="nav-btn" onClick={() => onNavigate('assistant')}>
           <span className="nav-icon">💬</span>
           <span>Assistent</span>
+        </button>
+        <button className="nav-btn" onClick={() => onNavigate('profile')}>
+          <span className="nav-icon">👤</span>
+          <span>Profiel</span>
         </button>
       </div>
     </div>
