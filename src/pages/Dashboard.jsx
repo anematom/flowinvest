@@ -38,6 +38,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
+  const [portfolioHistory, setPortfolioHistory] = useState([]);
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
   const prevValueRef = useRef(null);
@@ -77,9 +78,13 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
         setAiMessage(message);
         setTrades([]);
 
-        // 4. Log
+        // 4. Log + eerste snapshot
         const now = new Date();
         setLastCheck(now);
+        setPortfolioHistory(prev => [...prev, {
+          date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          value: parseFloat(totals.totalValue.toFixed(2)),
+        }]);
         setAiLog(prev => [
           {
             time: formatLastCheck(now),
@@ -148,9 +153,13 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
         const message = getMarketMessage(analysis, rebalanceTrades, totals.totalGainPercent);
         setAiMessage(message);
 
-        // 6. Log
+        // 6. Log + eerste snapshot
         const now = new Date();
         setLastCheck(now);
+        setPortfolioHistory(prev => [...prev, {
+          date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          value: parseFloat(totals.totalValue.toFixed(2)),
+        }]);
         setAiLog(prev => [
           {
             time: formatLastCheck(now),
@@ -206,7 +215,19 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
       prevValueRef.current = totals.totalValue;
 
       setLiveTotals(totals);
-      setLastPriceUpdate(new Date());
+      const now = new Date();
+      setLastPriceUpdate(now);
+
+      // Sla snapshot op voor live grafiek
+      setPortfolioHistory(prev => {
+        const snapshot = {
+          date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          value: parseFloat(totals.totalValue.toFixed(2)),
+        };
+        const updated = [...prev, snapshot];
+        // Bewaar max 200 snapshots (~100 minuten aan data)
+        return updated.slice(-200);
+      });
     } catch {
       // Server niet bereikbaar
     }
@@ -223,6 +244,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
       setMarketAnalysis(null);
       setAiMessage(null);
       setTrades([]);
+      setPortfolioHistory([]);
       prevValueRef.current = null;
     }
     return () => {
@@ -281,8 +303,8 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
     : simSummary;
 
   // Chart data
-  const chartData = liveMode && etfHistory?.length
-    ? etfHistory.map(d => ({ date: d.date, value: d.close }))
+  const chartData = liveMode && portfolioHistory.length > 1
+    ? portfolioHistory
     : simData;
 
   return (
@@ -465,8 +487,8 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
       {/* Chart */}
       <div className="chart-card">
         <h3>
-          {liveMode && etfHistory?.length
-            ? `${selectedETF} — afgelopen 12 maanden`
+          {liveMode && portfolioHistory.length > 1
+            ? 'Portfolio verloop (live)'
             : 'Portfolio verloop (simulatie)'}
         </h3>
         <div className="chart-container">
@@ -483,13 +505,13 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
                 tick={{ fontSize: 11, fill: '#90A4AE' }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={v => liveMode ? `$${v}` : `€${v}`}
+                tickFormatter={v => `€${v}`}
                 width={55}
                 domain={['dataMin', 'dataMax']}
               />
               <Tooltip
                 formatter={v => [
-                  `${liveMode ? '$' : '€'}${typeof v === 'number' ? v.toFixed(2) : v}`,
+                  `€${typeof v === 'number' ? v.toFixed(2) : v}`,
                   'Waarde'
                 ]}
                 contentStyle={{
