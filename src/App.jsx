@@ -63,16 +63,25 @@ function App() {
   }
 
   async function handleOnboardingComplete(userSettings) {
-    if (user) {
-      const saved = await savePortfolio(user.id, {
-        name: onboardingName || 'Mijn portfolio',
-        ...userSettings,
-      });
-      if (saved) {
-        setPortfolios(prev => [...prev, saved]);
-        setActiveIndex(portfolios.length);
+    const name = onboardingName || 'Mijn portfolio';
+    const newPortfolio = { name, ...userSettings };
+
+    try {
+      if (user) {
+        const saved = await savePortfolio(user.id, newPortfolio);
+        if (saved) {
+          newPortfolio.id = saved.id;
+        }
       }
+    } catch (err) {
+      console.error('Fout bij opslaan portfolio:', err);
     }
+
+    setPortfolios(prev => {
+      const updated = [...prev, newPortfolio];
+      setActiveIndex(updated.length - 1);
+      return updated;
+    });
     setPage('dashboard');
     setOnboardingName(null);
   }
