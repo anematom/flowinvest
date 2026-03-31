@@ -12,7 +12,6 @@ import {
   getUltraMessage,
   formatLastCheck,
 } from '../data/smartAI';
-import { analyzeStock, generateTradeActions } from '../data/indicators';
 import { MoneyModal, EditModal } from './SettingsModal';
 import '../styles/Dashboard.css';
 
@@ -93,9 +92,10 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
   }
 
   // Technische analyse — draait na elke smart check
-  const runTechnicalAnalysis = useCallback(async (portfolio) => {
+  async function runTechnicalAnalysis(portfolio) {
     if (!portfolio || portfolio.length === 0) return;
     try {
+      const { analyzeStock, generateTradeActions } = await import('../data/indicators');
       const symbols = portfolio.filter(h => !h.isDefensive).map(h => h.symbol);
       const historyData = await fetchStockHistory(symbols, 3);
 
@@ -114,7 +114,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     } catch {
       // Historische data niet beschikbaar
     }
-  }, []);
+  }
 
   // Core: fetch data, analyze, and rebalance
   const runSmartCheck = useCallback(async () => {
