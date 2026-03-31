@@ -67,8 +67,8 @@
 }
 
 .welcome-icon {
-  width: 72px;
-  height: 72px;
+  height: 100px;
+  width: auto;
   margin-bottom: 24px;
 }
 
