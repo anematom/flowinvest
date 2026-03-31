@@ -124,7 +124,7 @@ export default function Onboarding({ onComplete, portfolioName }) {
         {/* Welcome */}
         {currentStep.key === 'welcome' && (
           <div className="welcome-card">
-            <img src="/logo.svg" alt="FlowInvest" className="welcome-icon" />
+            <img src="/logo.png" alt="FlowInvest" className="welcome-icon" />
             <div className="welcome-features">
               <div className="feature">✓ Automatisch beleggen</div>
               <div className="feature">✓ AI-assistent voor al je vragen</div>

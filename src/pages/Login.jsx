@@ -46,8 +46,7 @@ export default function Login({ onAuth }) {
   return (
     <div className="login-page">
       <div className="login-card">
-        <img src="/logo.svg" alt="FlowInvest" className="login-logo" />
-        <h1>FlowInvest</h1>
+        <img src="/logo.png" alt="FlowInvest" className="login-logo" />
         <p className="login-tagline">Beleggen zonder gedoe</p>
         <p className="login-subtitle">
           {isRegister ? 'Maak een account aan' : 'Log in op je account'}

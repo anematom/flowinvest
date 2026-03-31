@@ -19,8 +19,8 @@
 }
 
 .dash-logo {
-  width: 32px;
   height: 32px;
+  width: auto;
 }
 
 .dash-title {
