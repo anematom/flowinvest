@@ -196,6 +196,36 @@ app.get('/api/stocks/top', async (req, res) => {
   }
 });
 
+// Historische slotkoersen voor technische analyse
+app.get('/api/stocks/history', async (req, res) => {
+  try {
+    const symbols = req.query.symbols ? req.query.symbols.split(',') : MOMENTUM_STOCKS.map(s => s.symbol);
+    const months = parseInt(req.query.months) || 3;
+    const to = Math.floor(Date.now() / 1000);
+    const from = to - (months * 30 * 24 * 60 * 60);
+
+    const results = {};
+    await Promise.all(
+      symbols.map(async (symbol) => {
+        try {
+          const data = await finnhubFetch(
+            `/stock/candle?symbol=${symbol.toUpperCase()}&resolution=D&from=${from}&to=${to}`
+          );
+          if (data.s !== 'no_data' && data.c) {
+            results[symbol.toUpperCase()] = data.c; // slotkoersen array
+          }
+        } catch {
+          // skip
+        }
+      })
+    );
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Markt status
 app.get('/api/market-status', async (req, res) => {
   try {

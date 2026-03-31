@@ -35,3 +35,10 @@ export async function fetchTopStocks(count = 5) {
   if (!res.ok) throw new Error('Failed to fetch top stocks');
   return res.json();
 }
+
+export async function fetchStockHistory(symbols, months = 3) {
+  const query = symbols ? `?symbols=${symbols.join(',')}&months=${months}` : `?months=${months}`;
+  const res = await fetch(`${API_BASE}/stocks/history${query}`);
+  if (!res.ok) throw new Error('Failed to fetch stock history');
+  return res.json();
+}

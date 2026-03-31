@@ -837,3 +837,117 @@
   border-color: #F44336;
   color: #F44336;
 }
+
+/* Trading signalen */
+.signals-card {
+  margin: 0 16px 16px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.signals-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #263238;
+  margin: 0 0 12px;
+}
+
+.signal-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.signal-item.signal-positive {
+  background: #E3F2FD;
+}
+
+.signal-item.signal-warning {
+  background: #FFF3E0;
+}
+
+.signal-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.signal-action {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.08);
+}
+
+.signal-symbol {
+  font-size: 14px;
+  font-weight: 600;
+  color: #263238;
+}
+
+.signal-reason {
+  font-size: 12px;
+  color: #546E7A;
+}
+
+/* Technische analyse */
+.analysis-card {
+  margin: 0 16px 16px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.analysis-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analysis-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.analysis-symbol {
+  font-size: 13px;
+  font-weight: 700;
+  color: #263238;
+  min-width: 50px;
+}
+
+.analysis-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.analysis-tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.tag-positive {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+
+.tag-warning {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.tag-neutral {
+  background: #F5F5F5;
+  color: #78909C;
+}
