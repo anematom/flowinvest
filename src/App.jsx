@@ -4,7 +4,7 @@ import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
 import Profile from './pages/Profile';
-import { supabase, loadPortfolios, savePortfolio, signOut } from './data/supabase';
+import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut } from './data/supabase';
 import './App.css';
 
 function App() {
@@ -113,7 +113,6 @@ function App() {
     setPortfolios(updated);
     setActiveIndex(0);
     if (toDelete.id) {
-      const { deletePortfolio } = await import('./data/supabase');
       await deletePortfolio(toDelete.id);
     }
   }
