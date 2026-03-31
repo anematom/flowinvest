@@ -37,10 +37,10 @@ const goalOptions = [
   { value: 'buffer', label: 'Financiële buffer', icon: '🛡️' },
 ];
 const horizonOptions = [
-  { value: '1-3', label: '1–3 jaar', desc: 'Kort' },
-  { value: '3-5', label: '3–5 jaar', desc: 'Middellang' },
-  { value: '5-10', label: '5–10 jaar', desc: 'Lang' },
-  { value: '10+', label: '10+ jaar', desc: 'Zeer lang' },
+  { value: '1-3', label: '1–3 jaar', desc: 'Snel resultaat zien' },
+  { value: '3-10', label: '3–10 jaar', desc: 'Sparen voor een doel' },
+  { value: '10-20', label: '10–20 jaar', desc: 'Serieus vermogen opbouwen' },
+  { value: '20+', label: '20+ jaar', desc: 'Pensioen & financiële vrijheid' },
 ];
 const riskOptions = [
   { value: 'low', label: 'Voorzichtig', desc: 'Stabiel rendement, weinig schommelingen', color: '#4CAF50' },
@@ -51,10 +51,10 @@ const riskOptions = [
 
 // Aanbevolen risicoprofiel op basis van doel + horizon
 const riskAdvice = {
-  growth: { '1-3': 'medium', '3-5': 'high', '5-10': 'high', '10+': 'ultra' },
-  goal: { '1-3': 'low', '3-5': 'medium', '5-10': 'high', '10+': 'high' },
-  retirement: { '1-3': 'low', '3-5': 'low', '5-10': 'medium', '10+': 'medium' },
-  buffer: { '1-3': 'low', '3-5': 'low', '5-10': 'low', '10+': 'medium' },
+  growth: { '1-3': 'medium', '3-10': 'high', '10-20': 'ultra', '20+': 'ultra' },
+  goal: { '1-3': 'low', '3-10': 'medium', '10-20': 'high', '20+': 'high' },
+  retirement: { '1-3': 'low', '3-10': 'low', '10-20': 'medium', '20+': 'medium' },
+  buffer: { '1-3': 'low', '3-10': 'low', '10-20': 'low', '20+': 'medium' },
 };
 
 function getRecommendedRisk(goal, horizon) {
