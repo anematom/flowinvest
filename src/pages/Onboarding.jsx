@@ -31,9 +31,10 @@ const steps = [
 
 const amountOptions = [50, 100, 500];
 const goalOptions = [
-  { value: 'wealth', label: 'Vermogen opbouwen', icon: '💰' },
-  { value: 'purchase', label: 'Grote aankoop', icon: '🏠' },
+  { value: 'growth', label: 'Geld laten groeien', icon: '📈' },
+  { value: 'goal', label: 'Sparen voor een doel', icon: '🎯' },
   { value: 'retirement', label: 'Pensioen', icon: '🌴' },
+  { value: 'buffer', label: 'Financiële buffer', icon: '🛡️' },
 ];
 const horizonOptions = [
   { value: '1-3', label: '1–3 jaar', desc: 'Kort' },
@@ -42,17 +43,18 @@ const horizonOptions = [
   { value: '10+', label: '10+ jaar', desc: 'Zeer lang' },
 ];
 const riskOptions = [
-  { value: 'low', label: 'Rustig', desc: 'Minder schommelingen, stabieler rendement', color: '#4CAF50' },
-  { value: 'medium', label: 'Gemiddeld', desc: 'Balans tussen groei en stabiliteit', color: '#FF9800' },
-  { value: 'high', label: 'Avontuurlijk', desc: 'Meer schommelingen, potentieel hoger rendement', color: '#F44336' },
-  { value: 'ultra', label: 'Ultra Agressief', desc: 'Losse aandelen — maximale groei, maximaal risico', color: '#9C27B0' },
+  { value: 'low', label: 'Voorzichtig', desc: 'Stabiel rendement, weinig schommelingen', color: '#4CAF50' },
+  { value: 'medium', label: 'Gebalanceerd', desc: 'Balans tussen groei en stabiliteit', color: '#FF9800' },
+  { value: 'high', label: 'Ambitieus', desc: 'Meer groei, meer schommelingen', color: '#F44336' },
+  { value: 'ultra', label: 'Maximaal', desc: 'Losse aandelen — hoogste groeipotentie', color: '#9C27B0' },
 ];
 
 // Aanbevolen risicoprofiel op basis van doel + horizon
 const riskAdvice = {
-  wealth: { '1-3': 'medium', '3-5': 'high', '5-10': 'high', '10+': 'ultra' },
-  purchase: { '1-3': 'low', '3-5': 'medium', '5-10': 'high', '10+': 'high' },
+  growth: { '1-3': 'medium', '3-5': 'high', '5-10': 'high', '10+': 'ultra' },
+  goal: { '1-3': 'low', '3-5': 'medium', '5-10': 'high', '10+': 'high' },
   retirement: { '1-3': 'low', '3-5': 'low', '5-10': 'medium', '10+': 'medium' },
+  buffer: { '1-3': 'low', '3-5': 'low', '5-10': 'low', '10+': 'medium' },
 };
 
 function getRecommendedRisk(goal, horizon) {

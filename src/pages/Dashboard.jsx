@@ -249,9 +249,12 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
   }, [liveMode, selectedETF]);
 
   const goalLabels = {
+    growth: 'Geld laten groeien',
+    goal: 'Sparen voor een doel',
+    retirement: 'Pensioen',
+    buffer: 'Financiële buffer',
     wealth: 'Vermogen opbouwen',
     purchase: 'Grote aankoop',
-    retirement: 'Pensioen',
   };
 
   const modeLabels = {
@@ -384,7 +387,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
 
           {isUltraMode(settings.risk) && (
             <div className="ultra-badge-bar">
-              <span className="ultra-badge">ULTRA AGRESSIEF</span>
+              <span className="ultra-badge">MAXIMAAL</span>
               <span className="ultra-desc">AI selecteert de sterkste aandelen</span>
             </div>
           )}
@@ -548,7 +551,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
         <div className="info-card">
           <span className="info-label">Risico</span>
           <span className="info-value">
-            {settings.risk === 'low' ? 'Rustig' : settings.risk === 'medium' ? 'Gemiddeld' : settings.risk === 'high' ? 'Avontuurlijk' : 'Ultra Agressief'}
+            {settings.risk === 'low' ? 'Voorzichtig' : settings.risk === 'medium' ? 'Gebalanceerd' : settings.risk === 'high' ? 'Ambitieus' : 'Maximaal'}
           </span>
         </div>
       </div>
