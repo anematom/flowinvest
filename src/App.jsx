@@ -66,15 +66,17 @@ function App() {
     const name = userSettings.name || onboardingName || 'Mijn portfolio';
     const newPortfolio = { name, ...userSettings };
 
-    try {
-      if (user) {
+    if (user) {
+      try {
         const saved = await savePortfolio(user.id, newPortfolio);
-        if (saved) {
+        if (saved && saved.id) {
           newPortfolio.id = saved.id;
+          newPortfolio.user_id = user.id;
         }
+      } catch (err) {
+        console.error('Fout bij opslaan portfolio:', err);
+        alert('Let op: portfolio kon niet worden opgeslagen in de database. Probeer opnieuw in te loggen.');
       }
-    } catch (err) {
-      console.error('Fout bij opslaan portfolio:', err);
     }
 
     setPortfolios(prev => {
