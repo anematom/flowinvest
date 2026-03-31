@@ -28,52 +28,96 @@ export async function getUser() {
   return user;
 }
 
-// ========== Settings ==========
-export async function loadUserSettings(userId) {
+// ========== Portfolios ==========
+export async function loadPortfolios(userId) {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('user_id', userId)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
-  return data;
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
-export async function saveUserSettings(userId, settings) {
+export async function savePortfolio(userId, portfolio) {
+  if (portfolio.id) {
+    // Update bestaand portfolio
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        name: portfolio.name,
+        amount: portfolio.amount,
+        goal: portfolio.goal,
+        horizon: portfolio.horizon,
+        risk: portfolio.risk,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', portfolio.id);
+    if (error) throw error;
+  } else {
+    // Nieuw portfolio
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: userId,
+        name: portfolio.name,
+        amount: portfolio.amount,
+        goal: portfolio.goal,
+        horizon: portfolio.horizon,
+        risk: portfolio.risk,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+}
+
+export async function deletePortfolio(portfolioId) {
   const { error } = await supabase
     .from('profiles')
-    .upsert({
-      user_id: userId,
-      amount: settings.amount,
-      goal: settings.goal,
-      horizon: settings.horizon,
-      risk: settings.risk,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    .delete()
+    .eq('id', portfolioId);
   if (error) throw error;
 }
 
+// Backwards compatible: laad eerste portfolio als "settings"
+export async function loadUserSettings(userId) {
+  const portfolios = await loadPortfolios(userId);
+  return portfolios.length > 0 ? portfolios[0] : null;
+}
+
+export async function saveUserSettings(userId, settings) {
+  await savePortfolio(userId, settings);
+}
+
 // ========== Transactions ==========
-export async function loadTransactions(userId) {
-  const { data, error } = await supabase
+export async function loadTransactions(userId, portfolioId) {
+  let query = supabase
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50);
+  if (portfolioId) {
+    query = query.eq('portfolio_id', portfolioId);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }
 
-export async function addTransaction(userId, tx) {
+export async function addTransaction(userId, tx, portfolioId) {
+  const row = {
+    user_id: userId,
+    type: tx.type,
+    amount: tx.amount,
+    label: tx.label,
+  };
+  if (portfolioId) row.portfolio_id = portfolioId;
   const { error } = await supabase
     .from('transactions')
-    .insert({
-      user_id: userId,
-      type: tx.type,
-      amount: tx.amount,
-      label: tx.label,
-    });
+    .insert(row);
   if (error) throw error;
 }
 

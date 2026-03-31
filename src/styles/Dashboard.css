@@ -28,6 +28,51 @@
   color: #263238;
 }
 
+/* Portfolio switcher */
+.portfolio-switcher {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 12px;
+  background: white;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.portfolio-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.portfolio-tab {
+  padding: 8px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 20px;
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  color: #78909C;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.portfolio-tab.active {
+  border-color: #4CAF50;
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.portfolio-tab.add-tab {
+  border-style: dashed;
+  color: #4CAF50;
+  font-size: 16px;
+  padding: 8px 14px;
+}
+
+.portfolio-tab.add-tab:hover {
+  background: #E8F5E9;
+}
+
 /* Balance */
 .balance-card {
   background: white;

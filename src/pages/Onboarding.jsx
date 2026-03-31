@@ -61,7 +61,7 @@ function getRecommendedRisk(goal, horizon) {
   return riskAdvice[goal]?.[horizon] || null;
 }
 
-export default function Onboarding({ onComplete }) {
+export default function Onboarding({ onComplete, portfolioName }) {
   const [step, setStep] = useState(0);
   const [settings, setSettings] = useState({
     amount: 100,

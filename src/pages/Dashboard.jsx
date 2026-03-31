@@ -20,7 +20,7 @@ const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
 const CHECK_INTERVAL = 10 * 60 * 1000; // 10 minuten
 const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
-export default function Dashboard({ settings, user, onNavigate, onUpdateSettings }) {
+export default function Dashboard({ settings, user, portfolios, activeIndex, onNavigate, onUpdateSettings, onSwitchPortfolio, onAddPortfolio, onDeletePortfolio }) {
   const [marketData, setMarketData] = useState(null);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
@@ -325,6 +325,30 @@ export default function Dashboard({ settings, user, onNavigate, onUpdateSettings
         </div>
         <span className="mode-toggle live">● Live</span>
       </div>
+
+      {/* Portfolio switcher */}
+      {portfolios && portfolios.length > 0 && (
+        <div className="portfolio-switcher">
+          {portfolios.map((p, i) => (
+            <button
+              key={p.id || i}
+              className={`portfolio-tab ${i === activeIndex ? 'active' : ''}`}
+              onClick={() => onSwitchPortfolio(i)}
+            >
+              {p.name || `Portfolio ${i + 1}`}
+            </button>
+          ))}
+          <button
+            className="portfolio-tab add-tab"
+            onClick={() => {
+              const name = prompt('Naam voor je nieuwe portfolio:');
+              if (name) onAddPortfolio(name);
+            }}
+          >
+            +
+          </button>
+        </div>
+      )}
 
       {/* Smart AI Status Bar */}
       {marketAnalysis && (
