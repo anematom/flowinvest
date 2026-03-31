@@ -48,6 +48,17 @@ const riskOptions = [
   { value: 'ultra', label: 'Ultra Agressief', desc: 'Losse aandelen — maximale groei, maximaal risico', color: '#9C27B0' },
 ];
 
+// Aanbevolen risicoprofiel op basis van doel + horizon
+const riskAdvice = {
+  wealth: { '1-3': 'medium', '3-5': 'high', '5-10': 'high', '10+': 'ultra' },
+  purchase: { '1-3': 'low', '3-5': 'medium', '5-10': 'high', '10+': 'high' },
+  retirement: { '1-3': 'low', '3-5': 'low', '5-10': 'medium', '10+': 'medium' },
+};
+
+function getRecommendedRisk(goal, horizon) {
+  return riskAdvice[goal]?.[horizon] || null;
+}
+
 export default function Onboarding({ onComplete }) {
   const [step, setStep] = useState(0);
   const [settings, setSettings] = useState({
@@ -173,17 +184,22 @@ export default function Onboarding({ onComplete }) {
         {/* Risk */}
         {currentStep.key === 'risk' && (
           <div className="options-list">
-            {riskOptions.map(r => (
-              <button
-                key={r.value}
-                className={`option-card-large ${settings.risk === r.value ? 'selected' : ''}`}
-                onClick={() => setSettings({ ...settings, risk: r.value })}
-                style={settings.risk === r.value ? { borderColor: r.color } : {}}
-              >
-                <span className="option-label">{r.label}</span>
-                <span className="option-desc">{r.desc}</span>
-              </button>
-            ))}
+            {riskOptions.map(r => {
+              const recommended = getRecommendedRisk(settings.goal, settings.horizon);
+              const isRecommended = recommended === r.value;
+              return (
+                <button
+                  key={r.value}
+                  className={`option-card-large ${settings.risk === r.value ? 'selected' : ''} ${isRecommended ? 'recommended' : ''}`}
+                  onClick={() => setSettings({ ...settings, risk: r.value })}
+                  style={settings.risk === r.value ? { borderColor: r.color } : {}}
+                >
+                  {isRecommended && <span className="recommended-badge">Aanbevolen voor jou</span>}
+                  <span className="option-label">{r.label}</span>
+                  <span className="option-desc">{r.desc}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
