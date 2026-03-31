@@ -8,6 +8,11 @@ const steps = [
     subtitle: 'Beleggen zonder stress. Wij regelen alles voor je.',
   },
   {
+    key: 'name',
+    title: 'Geef je portfolio een naam',
+    subtitle: 'Bijvoorbeeld: Pensioen, Spaardoel, of Maximaal rendement.',
+  },
+  {
     key: 'amount',
     title: 'Hoeveel wil je starten?',
     subtitle: 'Je kunt dit later altijd aanpassen.',
@@ -63,6 +68,7 @@ function getRecommendedRisk(goal, horizon) {
 
 export default function Onboarding({ onComplete, portfolioName }) {
   const [step, setStep] = useState(0);
+  const [name, setName] = useState(portfolioName || '');
   const [settings, setSettings] = useState({
     amount: 100,
     customAmount: '',
@@ -78,7 +84,7 @@ export default function Onboarding({ onComplete, portfolioName }) {
       setStep(step + 1);
     } else {
       const amount = settings.customAmount ? parseInt(settings.customAmount) : settings.amount;
-      onComplete({ ...settings, amount });
+      onComplete({ ...settings, amount, name: name || 'Mijn portfolio' });
     }
   }
 
@@ -89,6 +95,7 @@ export default function Onboarding({ onComplete, portfolioName }) {
   function canProceed() {
     switch (currentStep.key) {
       case 'welcome': return true;
+      case 'name': return name.trim().length > 0;
       case 'amount': return settings.amount > 0 || settings.customAmount;
       case 'goal': return settings.goal;
       case 'horizon': return settings.horizon;
@@ -124,6 +131,21 @@ export default function Onboarding({ onComplete, portfolioName }) {
               <div className="feature">✓ Geen kennis nodig</div>
               <div className="feature">✓ Start vanaf €50</div>
             </div>
+          </div>
+        )}
+
+        {/* Name */}
+        {currentStep.key === 'name' && (
+          <div className="name-input-wrapper">
+            <input
+              type="text"
+              className="name-input"
+              placeholder="Bijv. Pensioen, Spaardoel huis..."
+              value={name}
+              onChange={e => setName(e.target.value)}
+              maxLength={30}
+              autoFocus
+            />
           </div>
         )}
 

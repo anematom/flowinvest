@@ -63,7 +63,7 @@ function App() {
   }
 
   async function handleOnboardingComplete(userSettings) {
-    const name = onboardingName || 'Mijn portfolio';
+    const name = userSettings.name || onboardingName || 'Mijn portfolio';
     const newPortfolio = { name, ...userSettings };
 
     try {
@@ -155,7 +155,16 @@ function App() {
   }
 
   if (page === 'profile') {
-    return <Profile user={user} onNavigate={handleNavigate} onLogout={handleLogout} />;
+    return (
+      <Profile
+        user={user}
+        portfolios={portfolios}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+        onUpdatePortfolios={setPortfolios}
+        onDeletePortfolio={handleDeletePortfolio}
+      />
+    );
   }
 
   return (

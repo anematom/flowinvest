@@ -86,6 +86,35 @@
   text-align: left;
 }
 
+/* Name input */
+.name-input-wrapper {
+  width: 100%;
+}
+
+.name-input {
+  width: 100%;
+  padding: 18px 20px;
+  border: 2px solid #E0E0E0;
+  border-radius: 16px;
+  font-size: 18px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  color: #263238;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.name-input:focus {
+  border-color: #4CAF50;
+}
+
+.name-input::placeholder {
+  font-weight: 400;
+  color: #B0BEC5;
+}
+
 /* Amount options */
 .options-grid {
   display: grid;

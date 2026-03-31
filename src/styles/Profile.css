@@ -63,6 +63,104 @@
   word-break: break-all;
 }
 
+/* Portfolio beheer */
+.profile-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #263238;
+  margin: 0 0 12px;
+}
+
+.portfolio-row {
+  gap: 12px;
+}
+
+.portfolio-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.portfolio-detail {
+  font-size: 12px;
+  color: #90A4AE;
+}
+
+.portfolio-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.portfolio-edit-btn {
+  background: #E8F5E9;
+  border: none;
+  color: #4CAF50;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portfolio-delete-btn {
+  background: #FFEBEE;
+  border: none;
+  color: #F44336;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portfolio-edit-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: center;
+}
+
+.portfolio-name-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #4CAF50;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  outline: none;
+}
+
+.portfolio-save-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.portfolio-cancel-btn {
+  background: none;
+  color: #90A4AE;
+  border: none;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .logout-btn {
   width: 100%;
   padding: 14px;
