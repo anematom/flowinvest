@@ -123,8 +123,10 @@ export function MoneyModal({ settings, onUpdate, onClose }) {
             onChange={e => setAmount(e.target.value)}
             min="1"
           />
-          <button className="money-btn deposit" onClick={handleDeposit}>Storten</button>
-          <button className="money-btn withdraw" onClick={handleWithdraw}>Opnemen</button>
+          <div className="money-buttons">
+            <button className="money-btn deposit" onClick={handleDeposit}>Storten</button>
+            <button className="money-btn withdraw" onClick={handleWithdraw}>Opnemen</button>
+          </div>
         </div>
 
         <div className="money-auto">
