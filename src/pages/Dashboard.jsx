@@ -320,10 +320,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
       {/* Header */}
       <div className="dash-header">
         <div>
-          <span className="dash-logo">🌱</span>
+          <img src="/logo.svg" alt="FlowInvest" className="dash-logo" />
           <span className="dash-title">FlowInvest</span>
         </div>
-        <span className="mode-toggle live">● Live</span>
       </div>
 
       {/* Portfolio switcher */}

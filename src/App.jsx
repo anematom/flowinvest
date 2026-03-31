@@ -131,7 +131,7 @@ function App() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F7F9F8' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48 }}>🌱</div>
+          <img src="/logo.svg" alt="FlowInvest" style={{ width: 64, height: 64 }} />
           <p style={{ color: '#78909C', marginTop: 12 }}>Laden...</p>
         </div>
       </div>

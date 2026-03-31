@@ -31,9 +31,9 @@ export default function Profile({ user, portfolios, onNavigate, onLogout, onUpda
   return (
     <div className="profile-page">
       <div className="profile-header">
-        <span className="profile-avatar">
+        <div className="profile-avatar">
           {user.email?.[0]?.toUpperCase() || '?'}
-        </span>
+        </div>
         <h1>Mijn profiel</h1>
       </div>
 
