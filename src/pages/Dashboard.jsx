@@ -290,8 +290,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
           ...prev.slice(0, 19),
         ]);
       }
-      // Technische analyse uitvoeren
-      if (portfolio) runTechnicalAnalysis(portfolio);
+      // Technische analyse tijdelijk uit
+      // if (portfolio) runTechnicalAnalysis(portfolio);
     } catch {
       // Server niet bereikbaar
     }
