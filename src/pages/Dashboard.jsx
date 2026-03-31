@@ -38,16 +38,28 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
+  const historyKey = `flowinvest_history_${settings.id || activeIndex}`;
+
   const [portfolioHistory, setPortfolioHistoryState] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('flowinvest_history')) || [];
+      return JSON.parse(localStorage.getItem(historyKey)) || [];
     } catch { return []; }
   });
+
+  // Wissel history bij portfolio switch
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(historyKey)) || [];
+      setPortfolioHistoryState(saved);
+    } catch {
+      setPortfolioHistoryState([]);
+    }
+  }, [historyKey]);
 
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      localStorage.setItem('flowinvest_history', JSON.stringify(next));
+      localStorage.setItem(historyKey, JSON.stringify(next));
       return next;
     });
   }
