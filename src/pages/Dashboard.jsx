@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { generatePortfolioData, getPortfolioSummary } from '../data/simulation';
 import { fetchPortfolio, fetchHistory, fetchStocks } from '../data/marketApi';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
@@ -24,7 +23,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
   const [marketData, setMarketData] = useState(null);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
-  const [liveMode, setLiveMode] = useState(false);
+  const [liveMode, setLiveMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [virtualPortfolio, setVirtualPortfolio] = useState(null);
   const [liveTotals, setLiveTotals] = useState(null);
@@ -42,17 +41,6 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
   const prevValueRef = useRef(null);
-
-  // Simulated data (fallback)
-  const simData = useMemo(
-    () => generatePortfolioData(settings.amount, settings.risk, 24),
-    [settings.amount, settings.risk]
-  );
-
-  const simSummary = useMemo(
-    () => getPortfolioSummary(simData, settings.amount),
-    [simData, settings.amount]
-  );
 
   // Core: fetch data, analyze, and rebalance
   const runSmartCheck = useCallback(async () => {
@@ -291,8 +279,8 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
     recovery: '#2196F3',
   };
 
-  // Which summary to show
-  const summary = liveMode && liveTotals
+  // Summary
+  const summary = liveTotals
     ? {
         currentValue: liveTotals.totalValue,
         gainLoss: liveTotals.totalGain,
@@ -300,12 +288,18 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
         isPositive: liveTotals.isPositive,
         status: aiMessage?.message || 'Laden...',
       }
-    : simSummary;
+    : {
+        currentValue: settings.amount,
+        gainLoss: 0,
+        gainLossPercent: '0.00',
+        isPositive: true,
+        status: 'Marktdata wordt geladen...',
+      };
 
   // Chart data
-  const chartData = liveMode && portfolioHistory.length > 1
+  const chartData = portfolioHistory.length > 1
     ? portfolioHistory
-    : simData;
+    : [{ date: 'Nu', value: settings.amount }];
 
   return (
     <div className="dashboard">
@@ -315,16 +309,11 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
           <span className="dash-logo">🌱</span>
           <span className="dash-title">FlowInvest</span>
         </div>
-        <button
-          className={`mode-toggle ${liveMode ? 'live' : ''}`}
-          onClick={() => setLiveMode(!liveMode)}
-        >
-          {liveMode ? '● Live' : '○ Simulatie'}
-        </button>
+        <span className="mode-toggle live">● Live</span>
       </div>
 
       {/* Smart AI Status Bar */}
-      {liveMode && marketAnalysis && (
+      {marketAnalysis && (
         <div className="ai-status-bar" style={{ borderLeftColor: modeColors[currentMode] }}>
           <div className="ai-status-top">
             <div className="ai-status-left">
@@ -367,16 +356,14 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
 
       {/* Balance card */}
       <div className="balance-card">
-        <p className="balance-label">
-          {liveMode ? 'Virtueel vermogen (live marktdata)' : 'Totaal vermogen (simulatie)'}
-        </p>
+        <p className="balance-label">Jouw vermogen</p>
         <h1 className={`balance-amount ${priceFlash ? `flash-${priceFlash}` : ''}`}>
           €{summary.currentValue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>
         <div className={`balance-change ${summary.isPositive ? 'positive' : 'negative'}`}>
           {summary.isPositive ? '↑' : '↓'} €{Math.abs(summary.gainLoss).toFixed(2)} ({summary.isPositive ? '+' : ''}{summary.gainLossPercent}%)
         </div>
-        {liveMode && lastPriceUpdate && (
+        {lastPriceUpdate && (
           <div className="live-ticker">
             <span className="ticker-dot" />
             Live — update elke 30 sec — {formatLastCheck(lastPriceUpdate)}
@@ -391,7 +378,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
       </div>
 
       {/* Virtual Portfolio Allocation */}
-      {liveMode && virtualPortfolio && (
+      {virtualPortfolio && (
         <div className="portfolio-section">
           <h3 className="section-title">
             {isUltraMode(settings.risk)
@@ -471,7 +458,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
       )}
 
       {/* Loading/Error for live mode */}
-      {liveMode && !virtualPortfolio && (
+      {!virtualPortfolio && (
         <div className="market-section">
           {loading ? (
             <div className="loading-card">AI analyseert de markt...</div>
@@ -486,11 +473,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
 
       {/* Chart */}
       <div className="chart-card">
-        <h3>
-          {liveMode && portfolioHistory.length > 1
-            ? 'Portfolio verloop (live)'
-            : 'Portfolio verloop (simulatie)'}
-        </h3>
+        <h3>Portfolio verloop</h3>
         <div className="chart-container">
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
@@ -536,7 +519,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
       </div>
 
       {/* AI Activity Log */}
-      {liveMode && aiLog.length > 0 && (
+      {aiLog.length > 0 && (
         <div className="ai-log-card">
           <h3>AI Activiteit</h3>
           <div className="ai-log-list">
