@@ -20,7 +20,7 @@ const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
 const CHECK_INTERVAL = 10 * 60 * 1000; // 10 minuten
 const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
-export default function Dashboard({ settings, onNavigate, onReset, onUpdateSettings }) {
+export default function Dashboard({ settings, user, onNavigate, onReset, onUpdateSettings, onLogout }) {
   const [marketData, setMarketData] = useState(null);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
@@ -577,6 +577,7 @@ export default function Dashboard({ settings, onNavigate, onReset, onUpdateSetti
       {activeModal === 'money' && (
         <MoneyModal
           settings={settings}
+          userId={user?.id}
           onUpdate={onUpdateSettings}
           onClose={() => setActiveModal(null)}
         />
@@ -590,10 +591,13 @@ export default function Dashboard({ settings, onNavigate, onReset, onUpdateSetti
         />
       )}
 
-      {/* Reset */}
+      {/* Account */}
       <div className="reset-section">
         <button className="reset-btn" onClick={onReset}>
           Opnieuw beginnen
+        </button>
+        <button className="reset-btn" onClick={onLogout}>
+          Uitloggen
         </button>
       </div>
 

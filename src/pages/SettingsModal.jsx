@@ -1,34 +1,36 @@
 import { useState, useEffect } from 'react';
+import {
+  loadTransactions as dbLoadTransactions,
+  addTransaction as dbAddTransaction,
+  loadAutoInvest as dbLoadAutoInvest,
+  saveAutoInvest as dbSaveAutoInvest,
+} from '../data/supabase';
 import '../styles/SettingsModal.css';
 
-const TRANSACTIONS_KEY = 'flowinvest_transactions';
-const AUTOINVEST_KEY = 'flowinvest_autoinvest';
-
-function loadTransactions() {
-  try {
-    return JSON.parse(localStorage.getItem(TRANSACTIONS_KEY)) || [];
-  } catch { return []; }
-}
-
-function saveTransactions(list) {
-  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(list));
-}
-
-function loadAutoInvest() {
-  try {
-    return JSON.parse(localStorage.getItem(AUTOINVEST_KEY)) || { enabled: false, amount: 100 };
-  } catch { return { enabled: false, amount: 100 }; }
-}
-
-function saveAutoInvest(config) {
-  localStorage.setItem(AUTOINVEST_KEY, JSON.stringify(config));
-}
-
 // ========== Geldbeheer modal ==========
-export function MoneyModal({ settings, onUpdate, onClose }) {
+export function MoneyModal({ settings, userId, onUpdate, onClose }) {
   const [amount, setAmount] = useState('');
-  const [transactions, setTransactions] = useState(loadTransactions());
-  const [autoInvest, setAutoInvest] = useState(loadAutoInvest());
+  const [transactions, setTransactions] = useState([]);
+  const [autoInvest, setAutoInvest] = useState({ enabled: false, amount: 100 });
+  const [loadingTx, setLoadingTx] = useState(true);
+
+  // Laad transacties en auto-invest uit Supabase
+  useEffect(() => {
+    if (!userId) return;
+    Promise.all([
+      dbLoadTransactions(userId),
+      dbLoadAutoInvest(userId),
+    ]).then(([txs, auto]) => {
+      setTransactions(txs.map(t => ({
+        type: t.type,
+        amount: t.amount,
+        date: t.created_at,
+        label: t.label,
+      })));
+      setAutoInvest({ enabled: auto.enabled || false, amount: auto.amount || 100 });
+      setLoadingTx(false);
+    }).catch(() => setLoadingTx(false));
+  }, [userId]);
 
   // Check maandelijkse storting bij openen
   useEffect(() => {
@@ -44,30 +46,18 @@ export function MoneyModal({ settings, onUpdate, onClose }) {
   }, []);
 
   function handleAutoDeposit() {
-    const tx = {
-      type: 'auto',
-      amount: autoInvest.amount,
-      date: new Date().toISOString(),
-      label: 'Maandelijkse storting',
-    };
-    const updated = [tx, ...transactions];
-    setTransactions(updated);
-    saveTransactions(updated);
+    const tx = { type: 'auto', amount: autoInvest.amount, label: 'Maandelijkse storting' };
+    setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
+    if (userId) dbAddTransaction(userId, tx);
     onUpdate({ ...settings, amount: settings.amount + autoInvest.amount });
   }
 
   function handleDeposit() {
     const value = parseFloat(amount);
     if (!value || value <= 0) return;
-    const tx = {
-      type: 'deposit',
-      amount: value,
-      date: new Date().toISOString(),
-      label: 'Storting',
-    };
-    const updated = [tx, ...transactions];
-    setTransactions(updated);
-    saveTransactions(updated);
+    const tx = { type: 'deposit', amount: value, label: 'Storting' };
+    setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
+    if (userId) dbAddTransaction(userId, tx);
     onUpdate({ ...settings, amount: settings.amount + value });
     setAmount('');
   }
@@ -75,15 +65,9 @@ export function MoneyModal({ settings, onUpdate, onClose }) {
   function handleWithdraw() {
     const value = parseFloat(amount);
     if (!value || value <= 0 || value > settings.amount) return;
-    const tx = {
-      type: 'withdraw',
-      amount: value,
-      date: new Date().toISOString(),
-      label: 'Opname',
-    };
-    const updated = [tx, ...transactions];
-    setTransactions(updated);
-    saveTransactions(updated);
+    const tx = { type: 'withdraw', amount: value, label: 'Opname' };
+    setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
+    if (userId) dbAddTransaction(userId, tx);
     onUpdate({ ...settings, amount: settings.amount - value });
     setAmount('');
   }
@@ -91,13 +75,13 @@ export function MoneyModal({ settings, onUpdate, onClose }) {
   function toggleAutoInvest() {
     const updated = { ...autoInvest, enabled: !autoInvest.enabled };
     setAutoInvest(updated);
-    saveAutoInvest(updated);
+    if (userId) dbSaveAutoInvest(userId, updated);
   }
 
   function updateAutoAmount(val) {
     const updated = { ...autoInvest, amount: val };
     setAutoInvest(updated);
-    saveAutoInvest(updated);
+    if (userId) dbSaveAutoInvest(userId, updated);
   }
 
   const autoAmounts = [50, 100, 200];
