@@ -7,7 +7,7 @@
 
 .progress-bar {
   height: 4px;
-  background: #E8F5E9;
+  background: #E3F2FD;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -82,7 +82,7 @@
   font-size: 16px;
   color: #263238;
   padding: 12px 16px;
-  background: #E8F5E9;
+  background: #E3F2FD;
   border-radius: 12px;
   text-align: left;
 }
@@ -140,7 +140,7 @@
 
 .option-card.selected {
   border-color: #4CAF50;
-  background: #E8F5E9;
+  background: #E3F2FD;
 }
 
 .option-value {
@@ -198,7 +198,7 @@
 
 .option-card-large.selected {
   border-color: #4CAF50;
-  background: #E8F5E9;
+  background: #E3F2FD;
 }
 
 .option-card-large.recommended {
@@ -207,7 +207,7 @@
 }
 
 .option-card-large.recommended.selected {
-  background: #E8F5E9;
+  background: #E3F2FD;
 }
 
 .recommended-badge {

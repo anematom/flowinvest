@@ -5,7 +5,7 @@ const steps = [
   {
     key: 'welcome',
     title: 'Welkom bij FlowInvest',
-    subtitle: 'Beleggen zonder stress. Wij regelen alles voor je.',
+    subtitle: 'Beleggen zonder gedoe. Wij regelen alles voor je.',
   },
   {
     key: 'name',

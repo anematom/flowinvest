@@ -59,7 +59,7 @@
 
 .portfolio-tab.active {
   border-color: #4CAF50;
-  background: #E8F5E9;
+  background: #E3F2FD;
   color: #2E7D32;
 }
 
@@ -71,7 +71,7 @@
 }
 
 .portfolio-tab.add-tab:hover {
-  background: #E8F5E9;
+  background: #E3F2FD;
 }
 
 /* Balance */
@@ -154,7 +154,7 @@
 .status-card {
   margin: 0 16px;
   padding: 16px 20px;
-  background: #E8F5E9;
+  background: #E3F2FD;
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -301,7 +301,7 @@
 }
 
 .mode-toggle.live {
-  background: #E8F5E9;
+  background: #E3F2FD;
   border-color: #4CAF50;
   color: #2E7D32;
 }
@@ -581,7 +581,7 @@
 }
 
 .ai-message-good, .ai-message-positive, .ai-message-info {
-  background: #E8F5E9;
+  background: #E3F2FD;
   color: #2E7D32;
 }
 
@@ -632,7 +632,7 @@
 }
 
 .trade-action.buy {
-  background: #E8F5E9;
+  background: #E3F2FD;
   color: #2E7D32;
 }
 
@@ -680,7 +680,7 @@
 }
 
 .refresh-btn:hover {
-  background: #E8F5E9;
+  background: #E3F2FD;
   border-color: #4CAF50;
 }
 
