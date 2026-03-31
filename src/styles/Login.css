@@ -18,9 +18,10 @@
 }
 
 .login-logo {
-  height: 120px;
-  width: auto;
-  margin-bottom: 12px;
+  width: 90%;
+  max-width: 360px;
+  height: auto;
+  margin-bottom: 16px;
 }
 
 .login-card h1 {
