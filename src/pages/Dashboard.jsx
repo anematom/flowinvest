@@ -63,7 +63,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     setLastCheck(null);
     setLastPriceUpdate(null);
     prevValueRef.current = null;
-  }, [historyKey]);
+  }, [historyKey, holdingsKey]);
 
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
@@ -73,9 +73,21 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     });
   }
   const [activeModal, setActiveModal] = useState(null); // 'money' | 'goal' | 'horizon' | 'risk'
+  const holdingsKey = `flowinvest_holdings_${settings.id || activeIndex}`;
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
   const prevValueRef = useRef(null);
+
+  // Laad opgeslagen holdings (aankoopprijzen + shares)
+  function loadSavedHoldings() {
+    try {
+      return JSON.parse(localStorage.getItem(holdingsKey));
+    } catch { return null; }
+  }
+
+  function saveHoldings(holdings) {
+    localStorage.setItem(holdingsKey, JSON.stringify(holdings));
+  }
 
   // Core: fetch data, analyze, and rebalance
   const runSmartCheck = useCallback(async () => {
@@ -90,8 +102,41 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
         setMarketAnalysis(analysis);
         setCurrentMode(analysis.mode);
 
-        // 2. Bouw momentum portfolio (top 5) met defensieve verschuiving
-        const portfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
+        // 2. Bouw portfolio of gebruik opgeslagen holdings
+        const saved = loadSavedHoldings();
+        let portfolio;
+        if (saved && saved.length > 0) {
+          // Update bestaande holdings met huidige prijzen
+          portfolio = saved.map(h => {
+            const quote = stockQuotes.find(q => q.symbol === h.symbol);
+            const currentPrice = quote?.price || h.buyPrice;
+            const currentValue = h.shares * currentPrice;
+            const gain = currentValue - h.invested;
+            const gainPercent = h.invested > 0 ? ((gain / h.invested) * 100) : 0;
+            return {
+              ...h,
+              price: currentPrice,
+              currentValue,
+              gain,
+              gainPercent,
+              changePercent: quote?.changePercent || 0,
+            };
+          });
+        } else {
+          // Eerste keer: koop en sla op
+          portfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
+          saveHoldings(portfolio.map(h => ({
+            symbol: h.symbol,
+            name: h.name,
+            description: h.description,
+            weight: h.weight,
+            rank: h.rank,
+            shares: h.shares,
+            invested: h.invested,
+            buyPrice: h.price,
+            isDefensive: h.isDefensive || false,
+          })));
+        }
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
         setLiveTotals(totals);
@@ -131,38 +176,62 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
         const smartAllocation = getSmartAllocation(settings.risk, analysis.mode);
         setCurrentMode(analysis.mode);
 
-        // 3. Bouw portfolio met slimme allocatie
-        const allocArray = Object.entries(smartAllocation).map(([symbol, weight]) => {
-          const quote = quotes.find(q => q.symbol === symbol);
-          return {
-            symbol,
-            name: quote?.name || symbol,
-            weight,
-          };
-        });
+        // 3. Bouw portfolio of gebruik opgeslagen holdings
+        const saved = loadSavedHoldings();
+        let portfolio;
+        if (saved && saved.length > 0) {
+          // Update bestaande holdings met huidige prijzen
+          portfolio = saved.map(h => {
+            const quote = quotes.find(q => q.symbol === h.symbol);
+            const currentPrice = quote?.price || h.buyPrice;
+            const currentValue = h.shares * currentPrice;
+            const gain = currentValue - h.invested;
+            const gainPercent = h.invested > 0 ? ((gain / h.invested) * 100) : 0;
+            return {
+              ...h,
+              price: currentPrice,
+              currentValue,
+              gain,
+              gainPercent,
+              changePercent: quote?.changePercent || 0,
+            };
+          });
+        } else {
+          // Eerste keer: bouw en sla op
+          const allocArray = Object.entries(smartAllocation).map(([symbol, weight]) => {
+            const quote = quotes.find(q => q.symbol === symbol);
+            return { symbol, name: quote?.name || symbol, weight };
+          });
 
-        const portfolio = allocArray.map(item => {
-          const quote = quotes.find(q => q.symbol === item.symbol);
-          if (!quote || !quote.price) {
-            return { ...item, shares: 0, invested: 0, currentValue: 0, gain: 0, gainPercent: 0 };
-          }
-          const invested = settings.amount * item.weight;
-          const shares = invested / quote.previousClose;
-          const currentValue = shares * quote.price;
-          const gain = currentValue - invested;
-          const gainPercent = invested > 0 ? (gain / invested) * 100 : 0;
+          portfolio = allocArray.map(item => {
+            const quote = quotes.find(q => q.symbol === item.symbol);
+            if (!quote || !quote.price) {
+              return { ...item, shares: 0, invested: 0, currentValue: 0, gain: 0, gainPercent: 0 };
+            }
+            const invested = settings.amount * item.weight;
+            const shares = invested / quote.price;
+            const currentValue = shares * quote.price;
+            return {
+              ...item,
+              shares,
+              invested,
+              currentValue,
+              gain: 0,
+              gainPercent: 0,
+              price: quote.price,
+              changePercent: quote.changePercent,
+            };
+          });
 
-          return {
-            ...item,
-            shares,
-            invested,
-            currentValue,
-            gain,
-            gainPercent,
-            price: quote.price,
-            changePercent: quote.changePercent,
-          };
-        });
+          saveHoldings(portfolio.map(h => ({
+            symbol: h.symbol,
+            name: h.name,
+            weight: h.weight,
+            shares: h.shares,
+            invested: h.invested,
+            buyPrice: h.price,
+          })));
+        }
 
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
