@@ -1,0 +1,221 @@
+.onboarding {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #F7F9F8;
+}
+
+.progress-bar {
+  height: 4px;
+  background: #E8F5E9;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4CAF50;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.4s ease;
+}
+
+.onboarding-content {
+  flex: 1;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.back-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #4CAF50;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.onboarding-content h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #263238;
+  text-align: center;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.subtitle {
+  color: #78909C;
+  font-size: 15px;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* Welcome card */
+.welcome-card {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  width: 100%;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.welcome-icon {
+  font-size: 48px;
+  margin-bottom: 24px;
+}
+
+.welcome-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature {
+  font-size: 16px;
+  color: #263238;
+  padding: 12px 16px;
+  background: #E8F5E9;
+  border-radius: 12px;
+  text-align: left;
+}
+
+/* Amount options */
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.option-card {
+  background: white;
+  border: 2px solid #E0E0E0;
+  border-radius: 16px;
+  padding: 20px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.option-card:hover {
+  border-color: #A5D6A7;
+}
+
+.option-card.selected {
+  border-color: #4CAF50;
+  background: #E8F5E9;
+}
+
+.option-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #263238;
+}
+
+.custom-amount {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+.custom-amount input {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 16px;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+  background: white;
+}
+
+.custom-amount input:focus {
+  border-color: #4CAF50;
+}
+
+/* Goal / Horizon / Risk options */
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.option-card-large {
+  background: white;
+  border: 2px solid #E0E0E0;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+}
+
+.option-card-large:hover {
+  border-color: #A5D6A7;
+}
+
+.option-card-large.selected {
+  border-color: #4CAF50;
+  background: #E8F5E9;
+}
+
+.option-icon {
+  font-size: 28px;
+}
+
+.option-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #263238;
+  display: block;
+}
+
+.option-desc {
+  font-size: 13px;
+  color: #78909C;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Footer */
+.onboarding-footer {
+  padding: 16px 24px 32px;
+  position: sticky;
+  bottom: 0;
+  background: #F7F9F8;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover {
+  background: #43A047;
+}
+
+.primary-btn:disabled {
+  background: #C8E6C9;
+  cursor: not-allowed;
+}
