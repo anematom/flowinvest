@@ -46,7 +46,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     } catch { return []; }
   });
 
-  // Wissel history bij portfolio switch
+  // Reset alles bij portfolio switch
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(historyKey)) || [];
@@ -54,6 +54,15 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     } catch {
       setPortfolioHistoryState([]);
     }
+    setVirtualPortfolio(null);
+    setLiveTotals(null);
+    setMarketAnalysis(null);
+    setAiMessage(null);
+    setTrades([]);
+    setAiLog([]);
+    setLastCheck(null);
+    setLastPriceUpdate(null);
+    prevValueRef.current = null;
   }, [historyKey]);
 
   function setPortfolioHistory(updater) {
