@@ -38,7 +38,19 @@ export default function Dashboard({ settings, onNavigate, onReset, onUpdateSetti
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
-  const [portfolioHistory, setPortfolioHistory] = useState([]);
+  const [portfolioHistory, setPortfolioHistoryState] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('flowinvest_history')) || [];
+    } catch { return []; }
+  });
+
+  function setPortfolioHistory(updater) {
+    setPortfolioHistoryState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('flowinvest_history', JSON.stringify(next));
+      return next;
+    });
+  }
   const [activeModal, setActiveModal] = useState(null); // 'money' | 'goal' | 'horizon' | 'risk'
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
