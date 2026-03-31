@@ -132,10 +132,12 @@ const MOMENTUM_STOCKS = [
 ];
 
 // Haal quotes op voor alle momentum aandelen en sorteer op prestatie
+// Inclusief BND (obligaties) voor defensieve verschuiving in ultra modus
 app.get('/api/stocks', async (req, res) => {
   try {
+    const allSymbols = [...MOMENTUM_STOCKS, { symbol: 'BND', name: 'Obligaties', description: 'Total Bond Market — veilige haven' }];
     const quotes = await Promise.all(
-      MOMENTUM_STOCKS.map(async (stock) => {
+      allSymbols.map(async (stock) => {
         try {
           const data = await finnhubFetch(`/quote?symbol=${stock.symbol}`);
           return {

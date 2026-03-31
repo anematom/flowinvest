@@ -66,8 +66,8 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
         setMarketAnalysis(analysis);
         setCurrentMode(analysis.mode);
 
-        // 2. Bouw momentum portfolio (top 5)
-        const portfolio = buildUltraPortfolio(settings.amount, stockQuotes);
+        // 2. Bouw momentum portfolio (top 5) met defensieve verschuiving
+        const portfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
         setLiveTotals(totals);

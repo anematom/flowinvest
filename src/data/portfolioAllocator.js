@@ -55,8 +55,15 @@ export function buildPortfolio(amount, riskLevel, quotes) {
 
 // Bouw een ultra-agressief portfolio op basis van momentum
 // Selecteert de top 5 best presterende aandelen en verdeelt het geld
-export function buildUltraPortfolio(amount, stockQuotes) {
+// Bij daling wordt een deel naar obligaties (BND) verschoven
+export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   if (!stockQuotes || stockQuotes.length === 0) return [];
+
+  // Bepaal hoeveel naar aandelen vs obligaties gaat
+  const stockFraction = defensiveShift?.stocks ?? 1.0;
+  const bndFraction = defensiveShift?.BND ?? 0.0;
+  const stockAmount = amount * stockFraction;
+  const bndAmount = amount * bndFraction;
 
   // Top 5 aandelen op basis van dagelijks momentum
   const top5 = stockQuotes
@@ -66,13 +73,13 @@ export function buildUltraPortfolio(amount, stockQuotes) {
 
   if (top5.length === 0) return [];
 
-  // Verdeel geld: meer naar de sterkste performers
+  // Verdeel aandelengeld: meer naar de sterkste performers
   // #1 krijgt 30%, #2 25%, #3 20%, #4 15%, #5 10%
   const weights = [0.30, 0.25, 0.20, 0.15, 0.10];
 
-  return top5.map((stock, i) => {
-    const weight = weights[i] || 0.10;
-    const invested = amount * weight;
+  const portfolio = top5.map((stock, i) => {
+    const stockWeight = weights[i] || 0.10;
+    const invested = stockAmount * stockWeight;
     const shares = invested / stock.previousClose;
     const currentValue = shares * stock.price;
     const gain = currentValue - invested;
@@ -82,7 +89,7 @@ export function buildUltraPortfolio(amount, stockQuotes) {
       symbol: stock.symbol,
       name: stock.name,
       description: stock.description,
-      weight,
+      weight: stockWeight * stockFraction,
       rank: i + 1,
       shares,
       invested,
@@ -95,6 +102,35 @@ export function buildUltraPortfolio(amount, stockQuotes) {
       low: stock.low,
     };
   });
+
+  // Voeg obligaties toe als er een defensieve verschuiving is
+  if (bndAmount > 0) {
+    // BND (obligatie ETF) als veilige haven
+    const bndQuote = stockQuotes.find(q => q.symbol === 'BND');
+    const bndPrice = bndQuote?.price || 72; // fallback prijs
+    const bndPrevClose = bndQuote?.previousClose || bndPrice;
+    const bndShares = bndAmount / bndPrevClose;
+    const bndValue = bndShares * bndPrice;
+    const bndGain = bndValue - bndAmount;
+
+    portfolio.push({
+      symbol: 'BND',
+      name: 'Obligaties (bescherming)',
+      description: `Veilige haven — ${Math.round(bndFraction * 100)}% van je geld`,
+      weight: bndFraction,
+      rank: 6,
+      shares: bndShares,
+      invested: bndAmount,
+      currentValue: bndValue,
+      gain: bndGain,
+      gainPercent: bndAmount > 0 ? ((bndGain / bndAmount) * 100) : 0,
+      price: bndPrice,
+      changePercent: bndQuote?.changePercent || 0,
+      isDefensive: true,
+    });
+  }
+
+  return portfolio;
 }
 
 // Bereken totale portfolio waarde

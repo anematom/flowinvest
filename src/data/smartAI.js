@@ -35,12 +35,13 @@ const defensiveShifts = {
     defense:  { SPY: 0.25, VTI: 0.15, VXUS: 0.15, VGK: 0.10, BND: 0.35 },
     panic:    { BND: 0.50, SPY: 0.20, VTI: 0.10, VXUS: 0.10, VGK: 0.10 },
   },
-  // Ultra: geen defensieve modus — altijd vol in aandelen
-  // Bij paniek wisselen we naar de minst dalende aandelen
+  // Ultra: geleidelijk afbouwen bij daling
+  // Bij paniek deels naar BND (obligaties), rest in sterkste aandelen
   ultra: {
-    normal:   null, // wordt dynamisch bepaald op basis van momentum
-    defense:  null,
-    panic:    null,
+    normal:   { stocks: 1.00, BND: 0.00 }, // 100% in top aandelen
+    defense:  { stocks: 0.80, BND: 0.20 }, // 20% naar obligaties
+    panic:    { stocks: 0.60, BND: 0.40 }, // 40% naar obligaties
+    crisis:   { stocks: 0.40, BND: 0.60 }, // 60% naar obligaties bij -10%+
   },
 };
 
@@ -131,10 +132,15 @@ export function analyzeUltraMarket(stockQuotes) {
     (a.changePercent || 0) < (b.changePercent || 0) ? a : b
   );
 
+  // Geleidelijke afbouw: trapsgewijs defensiever
   let mode = 'normal';
-  if (avgChange <= -5) mode = 'panic';
-  else if (avgChange <= -2) mode = 'defense';
-  else if (avgChange >= 1.5) mode = 'recovery';
+  if (avgChange <= THRESHOLDS.stopLoss) mode = 'crisis';       // -10%+: zwaarste bescherming
+  else if (avgChange <= THRESHOLDS.panicMode) mode = 'panic';   // -5% tot -10%: 40% obligaties
+  else if (avgChange <= THRESHOLDS.defenseMode) mode = 'defense'; // -2% tot -5%: 20% obligaties
+  else if (avgChange >= THRESHOLDS.recoveryMode) mode = 'recovery';
+
+  // Buy the dip: bij daling tussen -3% en -10%, koop bij met kleine bedragen
+  const shouldBuyDip = avgChange <= THRESHOLDS.buyDipThreshold && avgChange > THRESHOLDS.stopLoss;
 
   return {
     mode,
@@ -143,27 +149,53 @@ export function analyzeUltraMarket(stockQuotes) {
     losers,
     bestStock,
     worstStock,
-    shouldRotate: true, // ultra modus roteert altijd naar de sterkste
+    shouldRotate: true,
+    shouldBuyDip,
+    // Geeft aan hoeveel % naar obligaties gaat
+    defensiveShift: defensiveShifts.ultra[mode] || defensiveShifts.ultra.normal,
   };
+}
+
+// Haal ultra defensieve verdeling op
+export function getUltraDefensiveShift(mode) {
+  return defensiveShifts.ultra[mode] || defensiveShifts.ultra.normal;
 }
 
 // Genereer AI-bericht specifiek voor ultra modus
 export function getUltraMessage(analysis, portfolio, totalGainPercent) {
-  const { avgChange, winners, losers, bestStock, worstStock } = analysis;
+  const { mode, avgChange, winners, losers, bestStock, worstStock, shouldBuyDip, defensiveShift } = analysis;
+  const bndPercent = Math.round((defensiveShift?.BND || 0) * 100);
+  const stockPercent = Math.round((defensiveShift?.stocks || 1) * 100);
 
-  if (totalGainPercent <= THRESHOLDS.stopLoss) {
+  if (mode === 'crisis') {
     return {
       type: 'warning',
-      title: 'Stop-loss geactiveerd',
-      message: `Je portfolio is ${Math.abs(totalGainPercent).toFixed(1)}% gedaald. Bij ultra modus kan dit snel gaan. Overweeg om naar een rustiger profiel te schakelen.`,
+      title: 'Zware daling — maximale bescherming actief',
+      message: `De markt daalt ${Math.abs(avgChange).toFixed(1)}%. Je portfolio is nu ${bndPercent}% obligaties en ${stockPercent}% in de sterkste aandelen. Bij herstel (+3%) schakelen we geleidelijk terug.`,
     };
   }
 
-  if (avgChange <= -3) {
+  if (mode === 'panic') {
     return {
       type: 'alert',
-      title: 'Aandelen dalen fors',
-      message: `Gemiddeld ${Math.abs(avgChange).toFixed(1)}% daling. ${worstStock.symbol} daalt het meest (${worstStock.changePercent.toFixed(1)}%). De AI verschuift naar de sterkste aandelen om verlies te beperken.`,
+      title: 'Forse daling — deels beschermd',
+      message: `Gemiddeld ${Math.abs(avgChange).toFixed(1)}% daling. ${bndPercent}% van je geld is naar obligaties verschoven. De rest zit in de sterkste aandelen.${shouldBuyDip ? ' Buy-the-dip is actief: er wordt bijgekocht tegen lage koersen.' : ''}`,
+    };
+  }
+
+  if (mode === 'defense') {
+    return {
+      type: 'caution',
+      title: 'Lichte daling — voorzichtigheidsmodus',
+      message: `De markt daalt ${Math.abs(avgChange).toFixed(1)}%. ${bndPercent}% is naar obligaties verschoven ter bescherming. ${stockPercent}% blijft in de top aandelen.${shouldBuyDip ? ' Buy-the-dip is actief.' : ''}`,
+    };
+  }
+
+  if (mode === 'recovery') {
+    return {
+      type: 'positive',
+      title: 'Markt herstelt — terug naar vol gas',
+      message: `De markt stijgt ${avgChange.toFixed(1)}%! Je portfolio is terug naar 100% aandelen om maximaal te profiteren. ${bestStock.symbol} is de sterkste (+${bestStock.changePercent.toFixed(1)}%).`,
     };
   }
 
@@ -171,7 +203,7 @@ export function getUltraMessage(analysis, portfolio, totalGainPercent) {
     return {
       type: 'positive',
       title: 'Sterke dag!',
-      message: `${winners} van de 10 aandelen stijgen. ${bestStock.symbol} is de beste (+${bestStock.changePercent.toFixed(1)}%). Je geld zit in de top 5 performers.`,
+      message: `${winners} van de 10 aandelen stijgen. ${bestStock.symbol} is de beste (+${bestStock.changePercent.toFixed(1)}%). Je geld zit 100% in de top 5 performers.`,
     };
   }
 
@@ -179,7 +211,7 @@ export function getUltraMessage(analysis, portfolio, totalGainPercent) {
     return {
       type: 'good',
       title: 'Markt is positief',
-      message: `${winners} stijgers, ${losers} dalers. Beste: ${bestStock.symbol} (+${bestStock.changePercent.toFixed(1)}%). De AI focust je geld op de winnaars.`,
+      message: `${winners} stijgers, ${losers} dalers. Beste: ${bestStock.symbol} (+${bestStock.changePercent.toFixed(1)}%). 100% in aandelen — de AI focust op de winnaars.`,
     };
   }
 
@@ -187,14 +219,14 @@ export function getUltraMessage(analysis, portfolio, totalGainPercent) {
     return {
       type: 'caution',
       title: 'Meer dalers dan stijgers',
-      message: `${losers} dalers, ${winners} stijgers. De AI heeft geroteerd naar de minst dalende aandelen. Bij ultra modus zijn schommelingen normaal.`,
+      message: `${losers} dalers, ${winners} stijgers. De AI roteert naar de sterkste aandelen. Portfolio blijft 100% in aandelen zolang de daling beperkt is.`,
     };
   }
 
   return {
     type: 'good',
     title: 'Portfolio actief beheerd',
-    message: `De AI monitort 10 aandelen en houdt je geld in de top 5. Huidige beste: ${bestStock.symbol} (+${bestStock.changePercent?.toFixed(1) || '0'}%).`,
+    message: `De AI monitort 10 aandelen en houdt je geld in de top 5. 100% in aandelen. Huidige beste: ${bestStock.symbol} (+${bestStock.changePercent?.toFixed(1) || '0'}%).`,
   };
 }
 
