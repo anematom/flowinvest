@@ -38,6 +38,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
+  const portfolioKey = String(settings.id || activeIndex || 0);
+  const holdingsKey = 'flowinvest_holdings_' + portfolioKey;
   const historyKey = 'flowinvest_history_' + portfolioKey;
 
   const [portfolioHistory, setPortfolioHistoryState] = useState(() => {
@@ -73,10 +75,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     });
   }
   const [activeModal, setActiveModal] = useState(null);
-  const [tradeSignals, setTradeSignals] = useState([]);
-  const [stockAnalyses, setStockAnalyses] = useState({});
-  const portfolioKey = String(settings.id || activeIndex || 0);
-  const holdingsKey = 'flowinvest_holdings_' + portfolioKey;
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
   const prevValueRef = useRef(null);
