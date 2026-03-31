@@ -165,6 +165,22 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
+.info-card.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.info-card.clickable:hover {
+  border-color: #4CAF50;
+}
+
+.edit-icon {
+  font-size: 11px;
+  color: #B0BEC5;
+  margin-left: 4px;
+}
+
 .info-label {
   font-size: 12px;
   color: #90A4AE;

@@ -26,8 +26,15 @@ function App() {
     setPage('dashboard');
   }
 
+  function handleUpdateSettings(newSettings) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
+    setSettings(newSettings);
+  }
+
   function handleReset() {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('flowinvest_transactions');
+    localStorage.removeItem('flowinvest_autoinvest');
     setSettings(null);
     setPage('onboarding');
   }
@@ -44,7 +51,7 @@ function App() {
     return <Assistant onNavigate={handleNavigate} />;
   }
 
-  return <Dashboard settings={settings} onNavigate={handleNavigate} onReset={handleReset} />;
+  return <Dashboard settings={settings} onNavigate={handleNavigate} onReset={handleReset} onUpdateSettings={handleUpdateSettings} />;
 }
 
 export default App;

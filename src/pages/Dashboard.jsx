@@ -12,6 +12,7 @@ import {
   getUltraMessage,
   formatLastCheck,
 } from '../data/smartAI';
+import { MoneyModal, EditModal } from './SettingsModal';
 import '../styles/Dashboard.css';
 
 const PIE_COLORS = ['#4CAF50', '#66BB6A', '#81C784', '#A5D6A7', '#C8E6C9'];
@@ -19,7 +20,7 @@ const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
 const CHECK_INTERVAL = 10 * 60 * 1000; // 10 minuten
 const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
-export default function Dashboard({ settings, onNavigate, onReset }) {
+export default function Dashboard({ settings, onNavigate, onReset, onUpdateSettings }) {
   const [marketData, setMarketData] = useState(null);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
@@ -38,6 +39,7 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
   const [portfolioHistory, setPortfolioHistory] = useState([]);
+  const [activeModal, setActiveModal] = useState(null); // 'money' | 'goal' | 'horizon' | 'risk'
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
   const prevValueRef = useRef(null);
@@ -539,25 +541,42 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
 
       {/* Info cards */}
       <div className="info-grid">
-        <div className="info-card">
-          <span className="info-label">Inleg</span>
-          <span className="info-value">€{settings.amount}</span>
+        <div className="info-card clickable" onClick={() => setActiveModal('money')}>
+          <span className="info-label">Inleg <span className="edit-icon">✎</span></span>
+          <span className="info-value">€{settings.amount.toLocaleString('nl-NL')}</span>
         </div>
-        <div className="info-card">
-          <span className="info-label">Doel</span>
+        <div className="info-card clickable" onClick={() => setActiveModal('goal')}>
+          <span className="info-label">Doel <span className="edit-icon">✎</span></span>
           <span className="info-value">{goalLabels[settings.goal]}</span>
         </div>
-        <div className="info-card">
-          <span className="info-label">Horizon</span>
+        <div className="info-card clickable" onClick={() => setActiveModal('horizon')}>
+          <span className="info-label">Horizon <span className="edit-icon">✎</span></span>
           <span className="info-value">{settings.horizon} jaar</span>
         </div>
-        <div className="info-card">
-          <span className="info-label">Risico</span>
+        <div className="info-card clickable" onClick={() => setActiveModal('risk')}>
+          <span className="info-label">Risico <span className="edit-icon">✎</span></span>
           <span className="info-value">
             {settings.risk === 'low' ? 'Voorzichtig' : settings.risk === 'medium' ? 'Gebalanceerd' : settings.risk === 'high' ? 'Ambitieus' : 'Maximaal'}
           </span>
         </div>
       </div>
+
+      {/* Modals */}
+      {activeModal === 'money' && (
+        <MoneyModal
+          settings={settings}
+          onUpdate={onUpdateSettings}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+      {(activeModal === 'goal' || activeModal === 'horizon' || activeModal === 'risk') && (
+        <EditModal
+          field={activeModal}
+          settings={settings}
+          onUpdate={onUpdateSettings}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
 
       {/* Reset */}
       <div className="reset-section">
