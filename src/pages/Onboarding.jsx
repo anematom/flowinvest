@@ -14,7 +14,7 @@ const steps = [
   },
   {
     key: 'goal',
-    title: 'Wat is je doel?',
+    title: 'Wat beschrijft jou het beste?',
     subtitle: 'Dit helpt ons de juiste strategie te kiezen.',
   },
   {
@@ -31,10 +31,10 @@ const steps = [
 
 const amountOptions = [50, 100, 500];
 const goalOptions = [
-  { value: 'growth', label: 'Geld laten groeien', icon: '📈' },
-  { value: 'goal', label: 'Sparen voor een doel', icon: '🎯' },
-  { value: 'retirement', label: 'Pensioen', icon: '🌴' },
-  { value: 'buffer', label: 'Financiële buffer', icon: '🛡️' },
+  { value: 'starter', label: 'Ik wil beginnen met beleggen', icon: '🌱' },
+  { value: 'target', label: 'Ik spaar voor iets specifieks', icon: '🎯' },
+  { value: 'future', label: 'Ik bouw aan mijn toekomst', icon: '🏗️' },
+  { value: 'idle', label: 'Ik wil mijn geld niet laten stilstaan', icon: '💡' },
 ];
 const horizonOptions = [
   { value: '1-3', label: '1–3 jaar', desc: 'Snel resultaat zien' },
@@ -51,10 +51,10 @@ const riskOptions = [
 
 // Aanbevolen risicoprofiel op basis van doel + horizon
 const riskAdvice = {
-  growth: { '1-3': 'medium', '3-10': 'high', '10-20': 'ultra', '20+': 'ultra' },
-  goal: { '1-3': 'low', '3-10': 'medium', '10-20': 'high', '20+': 'high' },
-  retirement: { '1-3': 'low', '3-10': 'low', '10-20': 'medium', '20+': 'medium' },
-  buffer: { '1-3': 'low', '3-10': 'low', '10-20': 'low', '20+': 'medium' },
+  starter: { '1-3': 'low', '3-10': 'medium', '10-20': 'high', '20+': 'high' },
+  target: { '1-3': 'low', '3-10': 'medium', '10-20': 'high', '20+': 'high' },
+  future: { '1-3': 'medium', '3-10': 'high', '10-20': 'ultra', '20+': 'ultra' },
+  idle: { '1-3': 'low', '3-10': 'low', '10-20': 'medium', '20+': 'medium' },
 };
 
 function getRecommendedRisk(goal, horizon) {

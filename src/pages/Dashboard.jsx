@@ -249,12 +249,10 @@ export default function Dashboard({ settings, onNavigate, onReset }) {
   }, [liveMode, selectedETF]);
 
   const goalLabels = {
-    growth: 'Geld laten groeien',
-    goal: 'Sparen voor een doel',
-    retirement: 'Pensioen',
-    buffer: 'Financiële buffer',
-    wealth: 'Vermogen opbouwen',
-    purchase: 'Grote aankoop',
+    starter: 'Beginnen met beleggen',
+    target: 'Sparen voor een doel',
+    future: 'Bouwen aan de toekomst',
+    idle: 'Geld niet laten stilstaan',
   };
 
   const modeLabels = {
