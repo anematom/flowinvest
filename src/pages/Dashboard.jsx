@@ -450,25 +450,25 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   // Summary — in paper mode gebruik Alpaca data
   const isPaper = brokerMode === 'paper';
   let summary;
-  if (isPaper && alpacaPositions.length > 0) {
-    const totalValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
-    const totalGain = alpacaPositions.reduce((sum, p) => sum + p.unrealizedPL, 0);
+  if (isPaper) {
+    // Bereken paper trading vermogen op basis van inleg
+    const totalPositionValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
+    // Begrens tot het inlegbedrag — je belegt niet meer dan je inleg
+    const cappedValue = Math.min(totalPositionValue, settings.amount * 1.5); // max 50% winst buffer
+    const totalGain = alpacaPositions.length > 0
+      ? alpacaPositions.reduce((sum, p) => sum + p.unrealizedPL, 0)
+      : 0;
+    // Vermogen = inleg + winst/verlies, maar nooit meer dan werkelijke posities
+    const currentValue = alpacaPositions.length > 0 ? settings.amount + totalGain : settings.amount;
     const gainPercent = settings.amount > 0 ? ((totalGain / settings.amount) * 100) : 0;
     summary = {
-      currentValue: settings.amount + totalGain,
+      currentValue: currentValue,
       gainLoss: totalGain,
       gainLossPercent: gainPercent.toFixed(2),
       isPositive: totalGain >= 0,
-      status: aiMessage?.message || (alpacaTradeResult ? `AI Modus: ${alpacaTradeResult.mode}` : 'Marktdata wordt geladen...'),
-      currency: '$',
-    };
-  } else if (isPaper) {
-    summary = {
-      currentValue: settings.amount,
-      gainLoss: 0,
-      gainLossPercent: '0.00',
-      isPositive: true,
-      status: 'Wachten op marktopening...',
+      status: aiMessage?.message || (alpacaPositions.length > 0
+        ? (alpacaTradeResult ? `AI Modus: ${alpacaTradeResult.mode}` : 'Laden...')
+        : 'Wachten op marktopening...'),
       currency: '$',
     };
   } else if (liveTotals) {
