@@ -278,8 +278,8 @@ app.post('/api/chat', async (req, res) => {
 
     res.json({ response });
   } catch (err) {
-    console.error('Gemini error:', err.message);
-    res.status(500).json({ error: 'AI niet beschikbaar' });
+    console.error('Gemini error:', err.message, err.stack);
+    res.status(500).json({ error: 'AI niet beschikbaar', detail: err.message });
   }
 });
 
