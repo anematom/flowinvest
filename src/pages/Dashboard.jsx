@@ -457,7 +457,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       gainLoss: gain,
       gainLossPercent: ((gain / 100000) * 100).toFixed(2),
       isPositive: gain >= 0,
-      status: alpacaTradeResult ? `AI Modus: ${alpacaTradeResult.mode} — ${alpacaTradeResult.stockFraction}% aandelen` : 'Laden...',
+      status: aiMessage?.message || (alpacaTradeResult ? `AI Modus: ${alpacaTradeResult.mode}` : 'Marktdata wordt geladen...'),
       currency: '$',
     };
   } else if (liveTotals) {
