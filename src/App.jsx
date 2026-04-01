@@ -120,10 +120,12 @@ function App() {
 
   function handleAddPortfolio(name, brokerMode) {
     if (brokerMode === 'paper' && !alpacaKeys) {
+      // Geen keys → toon setup flow
       setOnboardingMode({ name, brokerMode });
       setShowAlpacaSetup(true);
       return;
     }
+    // Keys al aanwezig → skip setup, direct naar onboarding
     setOnboardingMode({ name, brokerMode: brokerMode || 'simulation' });
     setPage('onboarding');
   }
@@ -209,6 +211,7 @@ function App() {
         user={user}
         portfolios={portfolios}
         activeIndex={activeIndex}
+        alpacaConnected={!!alpacaKeys}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         onUpdatePortfolios={setPortfolios}

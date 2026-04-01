@@ -14,7 +14,7 @@ const modeColors = {
   live: '#4CAF50',
 };
 
-export default function Profile({ user, portfolios, activeIndex, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio }) {
+export default function Profile({ user, portfolios, activeIndex, alpacaConnected, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
@@ -75,6 +75,15 @@ export default function Profile({ user, portfolios, activeIndex, onNavigate, onL
               day: 'numeric', month: 'long', year: 'numeric'
             })}
           </span>
+        </div>
+      </div>
+
+      {/* Broker status */}
+      <div className={`broker-status ${alpacaConnected ? 'connected' : ''}`}>
+        <span className="broker-status-icon">{alpacaConnected ? '✓' : '○'}</span>
+        <div>
+          <span className="broker-status-title">{alpacaConnected ? 'Verbonden met Alpaca' : 'Geen broker verbonden'}</span>
+          <span className="broker-status-desc">{alpacaConnected ? 'Je kunt paper trading en live trading gebruiken' : 'Verbind een broker om echt te beleggen'}</span>
         </div>
       </div>
 

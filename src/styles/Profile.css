@@ -63,6 +63,47 @@
   word-break: break-all;
 }
 
+/* Broker status */
+.broker-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border-left: 4px solid #E0E0E0;
+}
+
+.broker-status.connected {
+  border-left-color: #4CAF50;
+}
+
+.broker-status-icon {
+  font-size: 18px;
+  color: #E0E0E0;
+  font-weight: 700;
+}
+
+.broker-status.connected .broker-status-icon {
+  color: #4CAF50;
+}
+
+.broker-status-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #263238;
+}
+
+.broker-status-desc {
+  display: block;
+  font-size: 12px;
+  color: #90A4AE;
+  margin-top: 1px;
+}
+
 /* Portfolio beheer */
 .profile-section-title {
   font-size: 16px;
