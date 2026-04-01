@@ -1,34 +1,64 @@
 import { useState, useRef, useEffect } from 'react';
-import { getAIResponse, suggestedQuestions } from '../data/aiResponses';
 import '../styles/Assistant.css';
 
-export default function Assistant({ onNavigate }) {
+const API_BASE = import.meta.env.VITE_API_URL || 'https://flowinvest.onrender.com/api';
+
+const suggestedQuestions = [
+  'Waarom daalt mijn portfolio?',
+  'Wat is een ETF?',
+  'Moet ik nu bijkopen?',
+  'Hoe werkt compound interest?',
+  'Wat is het verschil tussen aandelen en obligaties?',
+];
+
+export default function Assistant({ onNavigate, settings }) {
   const [messages, setMessages] = useState([
     {
       role: 'ai',
-      text: 'Hoi! 👋 Ik ben je FlowInvest assistent. Stel me gerust een vraag over je beleggingen. Ik ben er om je te helpen.',
+      text: 'Hoi! Ik ben je FlowInvest assistent. Stel me gerust een vraag over beleggen of je portfolio. Ik ben er om je te helpen.',
     },
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  function sendMessage(text) {
+  async function sendMessage(text) {
     const userMsg = text || input.trim();
-    if (!userMsg) return;
+    if (!userMsg || loading) return;
 
-    const newMessages = [...messages, { role: 'user', text: userMsg }];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
+    setLoading(true);
 
-    // Simulate typing delay
-    setTimeout(() => {
-      const aiResponse = getAIResponse(userMsg);
-      setMessages(prev => [...prev, { role: 'ai', text: aiResponse }]);
-    }, 600);
+    try {
+      // Stuur portfolio context mee als beschikbaar
+      let portfolioContext = '';
+      if (settings) {
+        portfolioContext = `Inleg: €${settings.amount}, Risicoprofiel: ${settings.risk}, Doel: ${settings.goal}, Horizon: ${settings.horizon}`;
+      }
+
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, portfolioContext }),
+      });
+
+      if (!res.ok) throw new Error('AI niet beschikbaar');
+
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: 'ai', text: data.response }]);
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        text: 'Sorry, ik kan even niet antwoorden. Probeer het later opnieuw.',
+      }]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleKeyDown(e) {
@@ -46,7 +76,7 @@ export default function Assistant({ onNavigate }) {
           <span className="assistant-avatar">🤖</span>
           <div>
             <h2>FlowInvest Assistent</h2>
-            <span className="assistant-status">Altijd beschikbaar</span>
+            <span className="assistant-status">Powered by AI</span>
           </div>
         </div>
       </div>
@@ -61,12 +91,18 @@ export default function Assistant({ onNavigate }) {
             </div>
           </div>
         ))}
+        {loading && (
+          <div className="message ai">
+            <span className="msg-avatar">🤖</span>
+            <div className="msg-bubble typing">Aan het denken...</div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
 
         {/* Suggested questions */}
         {messages.length <= 2 && (
           <div className="suggestions">
-            <p className="suggestions-label">Veelgestelde vragen:</p>
+            <p className="suggestions-label">Stel een vraag:</p>
             {suggestedQuestions.map((q, i) => (
               <button key={i} className="suggestion-btn" onClick={() => sendMessage(q)}>
                 {q}
@@ -85,11 +121,12 @@ export default function Assistant({ onNavigate }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={loading}
           />
           <button
             className="send-btn"
             onClick={() => sendMessage()}
-            disabled={!input.trim()}
+            disabled={!input.trim() || loading}
           >
             ↑
           </button>

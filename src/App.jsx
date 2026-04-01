@@ -152,7 +152,7 @@ function App() {
   }
 
   if (page === 'assistant') {
-    return <Assistant onNavigate={handleNavigate} />;
+    return <Assistant onNavigate={handleNavigate} settings={activePortfolio} />;
   }
 
   if (page === 'profile') {

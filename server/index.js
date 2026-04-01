@@ -237,6 +237,53 @@ app.get('/api/market-status', async (req, res) => {
 });
 
 // ============================================
+// AI ASSISTENT — Google Gemini
+// ============================================
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAitYciOh57tu_OWy6r0JmBYEGZ7PdJ_Zw';
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+const SYSTEM_PROMPT = `Je bent de FlowInvest AI-assistent, een vriendelijke en kalme beleggingsadviseur.
+
+Je taak:
+- Help gebruikers met vragen over beleggen, hun portfolio en financiële keuzes
+- Geef rustig, begrijpelijk advies in het Nederlands
+- Gebruik simpele taal, geen jargon
+- Wees eerlijk over risico's
+- Moedig lange-termijn denken aan
+- Als je portfolio data krijgt, gebruik die in je antwoord
+
+Stijl:
+- Kort en bondig (max 3-4 zinnen)
+- Vriendelijk en geruststellend
+- Geen financieel advies disclaimer nodig, dit is een simulatie
+- Spreek de gebruiker aan met "je"`;
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, portfolioContext } = req.body;
+    if (!message) return res.status(400).json({ error: 'Geen bericht' });
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    let prompt = SYSTEM_PROMPT;
+    if (portfolioContext) {
+      prompt += `\n\nDe gebruiker heeft deze portfolio:\n${portfolioContext}`;
+    }
+    prompt += `\n\nGebruiker: ${message}\nAssistent:`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    res.json({ response });
+  } catch (err) {
+    console.error('Gemini error:', err.message);
+    res.status(500).json({ error: 'AI niet beschikbaar' });
+  }
+});
+
+// ============================================
 // SERVER START
 // ============================================
 const PORT = process.env.PORT || 3001;

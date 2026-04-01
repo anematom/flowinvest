@@ -2,7 +2,8 @@
   "name": "flowinvest-api",
   "type": "module",
   "dependencies": {
-    "express": "^5.2.1",
-    "cors": "^2.8.6"
+    "@google/generative-ai": "^0.24.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
   }
 }
