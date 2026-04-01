@@ -603,6 +603,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       {/* Balance card — toont Alpaca data in paper mode, anders simulatie */}
       <div className="balance-card">
         <p className="balance-label">Jouw vermogen</p>
+        <span className={`dashboard-mode-badge ${brokerMode}`}>
+          {brokerMode === 'paper' ? 'Paper Trading' : brokerMode === 'live' ? 'Live Trading' : 'Simulatie'}
+        </span>
         <h1 className={`balance-amount ${priceFlash ? `flash-${priceFlash}` : ''}`}>
           {cur}{summary.currentValue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>

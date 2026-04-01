@@ -880,6 +880,32 @@
   color: #E65100;
 }
 
+/* Dashboard modus badge */
+.dashboard-mode-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 10px;
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+}
+
+.dashboard-mode-badge.simulation {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+
+.dashboard-mode-badge.paper {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.dashboard-mode-badge.live {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
 /* Alpaca card */
 .alpaca-card {
   background: white;
