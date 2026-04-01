@@ -200,6 +200,17 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
+.loading-text {
+  color: #B0BEC5;
+  font-size: 24px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 .chart-header {
   display: flex;
   justify-content: space-between;

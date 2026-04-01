@@ -450,12 +450,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     };
   } else {
     summary = {
-      currentValue: settings.amount,
+      currentValue: null, // null = nog aan het laden
       gainLoss: 0,
       gainLossPercent: '0.00',
       isPositive: true,
       status: 'Marktdata wordt geladen...',
       currency: '€',
+      loading: true,
     };
   }
   const cur = summary.currency || '€';
@@ -574,12 +575,18 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         <span className={`dashboard-mode-badge ${brokerMode}`}>
           {brokerMode === 'paper' ? 'Paper Trading' : brokerMode === 'live' ? 'Live Trading' : 'Simulatie'}
         </span>
-        <h1 className={`balance-amount ${priceFlash ? `flash-${priceFlash}` : ''}`}>
-          {cur}{summary.currentValue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </h1>
-        <div className={`balance-change ${summary.isPositive ? 'positive' : 'negative'}`}>
-          {summary.isPositive ? '↑' : '↓'} {cur}{Math.abs(summary.gainLoss).toFixed(2)} ({summary.isPositive ? '+' : ''}{summary.gainLossPercent}%)
-        </div>
+        {summary.loading ? (
+          <h1 className="balance-amount loading-text">Laden...</h1>
+        ) : (
+          <>
+            <h1 className={`balance-amount ${priceFlash ? `flash-${priceFlash}` : ''}`}>
+              {cur}{summary.currentValue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </h1>
+            <div className={`balance-change ${summary.isPositive ? 'positive' : 'negative'}`}>
+              {summary.isPositive ? '↑' : '↓'} {cur}{Math.abs(summary.gainLoss).toFixed(2)} ({summary.isPositive ? '+' : ''}{summary.gainLossPercent}%)
+            </div>
+          </>
+        )}
         {lastPriceUpdate && (
           <div className="live-ticker">
             <span className="ticker-dot" />
