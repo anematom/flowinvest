@@ -93,6 +93,31 @@ export async function saveUserSettings(userId, settings) {
   await savePortfolio(userId, settings);
 }
 
+// ========== Portfolio Holdings & History ==========
+export async function loadPortfolioHoldings(portfolioId) {
+  if (!portfolioId) return null;
+  const { data, error } = await supabase
+    .from('portfolio_holdings')
+    .select('*')
+    .eq('portfolio_id', portfolioId)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+export async function savePortfolioHoldings(portfolioId, holdings, history) {
+  if (!portfolioId) return;
+  const { error } = await supabase
+    .from('portfolio_holdings')
+    .upsert({
+      portfolio_id: portfolioId,
+      holdings: holdings || [],
+      history: (history || []).slice(-200),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'portfolio_id' });
+  if (error) throw error;
+}
+
 // ========== Transactions ==========
 export async function loadTransactions(userId, portfolioId) {
   let query = supabase

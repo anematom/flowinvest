@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { fetchPortfolio, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
+import { loadPortfolioHoldings, savePortfolioHoldings } from '../data/supabase';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
@@ -39,58 +40,31 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
-  const portfolioKey = settings.id ? String(settings.id) : (settings.name + '_' + activeIndex);
-  const holdingsKey = 'flowinvest_holdings_' + portfolioKey;
-  const historyKey = 'flowinvest_history_' + portfolioKey;
+  const portfolioId = settings.id;
+  const [dbLoaded, setDbLoaded] = useState(false);
 
-  // Migreer data van oude key naar nieuwe key (eenmalig)
-  useEffect(() => {
-    if (!settings.id) return;
-    const oldKey = settings.name + '_' + activeIndex;
-    const oldHistoryKey = 'flowinvest_history_' + oldKey;
-    const oldHoldingsKey = 'flowinvest_holdings_' + oldKey;
-    const newHistoryKey = 'flowinvest_history_' + settings.id;
-    const newHoldingsKey = 'flowinvest_holdings_' + settings.id;
-
-    if (!localStorage.getItem(newHistoryKey) && localStorage.getItem(oldHistoryKey)) {
-      localStorage.setItem(newHistoryKey, localStorage.getItem(oldHistoryKey));
-      localStorage.removeItem(oldHistoryKey);
-    }
-    if (!localStorage.getItem(newHoldingsKey) && localStorage.getItem(oldHoldingsKey)) {
-      localStorage.setItem(newHoldingsKey, localStorage.getItem(oldHoldingsKey));
-      localStorage.removeItem(oldHoldingsKey);
-    }
-  }, [settings.id]);
-
-  const [portfolioHistory, setPortfolioHistoryState] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(historyKey)) || [];
-    } catch { return []; }
-  });
+  const [portfolioHistory, setPortfolioHistoryState] = useState([]);
 
   // Cache per portfolio — instant switchen
   const cacheRef = useRef({});
 
-  // Sla huidige state op in cache voor dit portfolio
+  // Sla huidige state op in cache
   useEffect(() => {
     return () => {
-      cacheRef.current[portfolioKey] = {
-        virtualPortfolio, liveTotals, marketAnalysis, aiMessage, trades, aiLog, lastCheck,
-      };
+      if (portfolioId) {
+        cacheRef.current[portfolioId] = {
+          virtualPortfolio, liveTotals, marketAnalysis, aiMessage, trades, aiLog, lastCheck,
+        };
+      }
     };
   });
 
-  // Herstel of reset bij portfolio switch
+  // Laad holdings en history uit Supabase bij portfolio switch
   useEffect(() => {
-    let saved = [];
-    try {
-      saved = JSON.parse(localStorage.getItem(historyKey)) || [];
-    } catch {}
-    setPortfolioHistoryState(saved);
+    setDbLoaded(false);
 
-    const cached = cacheRef.current[portfolioKey];
+    const cached = cacheRef.current[portfolioId];
     if (cached) {
-      // Herstel uit cache — instant
       setVirtualPortfolio(cached.virtualPortfolio);
       setLiveTotals(cached.liveTotals);
       setMarketAnalysis(cached.marketAnalysis);
@@ -99,7 +73,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       setAiLog(cached.aiLog);
       setLastCheck(cached.lastCheck);
     } else {
-      // Geen cache — reset en laat laden
       setVirtualPortfolio(null);
       setLiveTotals(null);
       setMarketAnalysis(null);
@@ -110,7 +83,25 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     }
     setLastPriceUpdate(null);
     prevValueRef.current = null;
-  }, [historyKey]);
+
+    // Laad uit Supabase
+    dbHoldingsRef.current = null;
+    if (portfolioId) {
+      loadPortfolioHoldings(portfolioId).then(data => {
+        if (data) {
+          if (data.history && data.history.length > 0 && !cached) {
+            setPortfolioHistoryState(data.history);
+          }
+          if (data.holdings && data.holdings.length > 0) {
+            dbHoldingsRef.current = data.holdings;
+          }
+        }
+        setDbLoaded(true);
+      }).catch(() => setDbLoaded(true));
+    } else {
+      setDbLoaded(true);
+    }
+  }, [portfolioId]);
 
   // Alpaca data laden en auto-traden in paper mode
   useEffect(() => {
@@ -151,13 +142,22 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     };
   }, [brokerMode, settings.risk]);
 
+  const saveTimerRef = useRef(null);
+  const dbHoldingsRef = useRef(null);
+
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      // Filter ongeldige waarden (0, negatief, of extreem ver van inleg)
       const filtered = next.filter(s => s.value > 0 && s.value > settings.amount * 0.1);
       const limited = filtered.slice(-200);
-      localStorage.setItem(historyKey, JSON.stringify(limited));
+
+      // Sla op naar Supabase (met debounce — max elke 30 sec)
+      if (portfolioId) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+          savePortfolioHoldings(portfolioId, null, limited).catch(() => {});
+        }, 30000);
+      }
       return limited;
     });
   }
@@ -212,8 +212,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setCurrentMode(analysis.mode);
 
         // 2. Bouw portfolio met huidige top 5 — roteer als nodig
-        let savedHoldings = null;
-        try { savedHoldings = JSON.parse(localStorage.getItem(holdingsKey)); } catch {}
+        let savedHoldings = dbHoldingsRef.current;
 
         // Altijd nieuw portfolio bouwen met huidige top 5
         const freshPortfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
@@ -238,14 +237,15 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           portfolio = freshPortfolio;
         }
 
-        // Sla op
-        try {
-          localStorage.setItem(holdingsKey, JSON.stringify(portfolio.map(h => ({
-            symbol: h.symbol, name: h.name, description: h.description,
-            weight: h.weight, rank: h.rank, shares: h.shares,
-            invested: h.invested, buyPrice: h.buyPrice || h.price, isDefensive: h.isDefensive || false,
-          }))));
-        } catch {}
+        // Sla holdings op naar Supabase
+        const holdingsToSave = portfolio.map(h => ({
+          symbol: h.symbol, name: h.name, description: h.description,
+          weight: h.weight, rank: h.rank, shares: h.shares,
+          invested: h.invested, buyPrice: h.buyPrice || h.price, isDefensive: h.isDefensive || false,
+        }));
+        if (portfolioId) {
+          savePortfolioHoldings(portfolioId, holdingsToSave, null).catch(() => {});
+        }
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
         setLiveTotals(totals);
@@ -294,8 +294,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setCurrentMode(analysis.mode);
 
         // 3. Bouw portfolio met huidige allocatie — behoud aankoopprijzen
-        let savedETF = null;
-        try { savedETF = JSON.parse(localStorage.getItem(holdingsKey)); } catch {}
+        let savedETF = dbHoldingsRef.current;
 
         const allocArray = Object.entries(smartAllocation).map(([symbol, weight]) => {
           const quote = quotes.find(q => q.symbol === symbol);
@@ -319,12 +318,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           return { ...item, shares, invested, currentValue: shares * quote.price, gain: 0, gainPercent: 0, price: quote.price, changePercent: quote.changePercent };
         });
 
-        try {
-          localStorage.setItem(holdingsKey, JSON.stringify(portfolio.map(h => ({
-            symbol: h.symbol, name: h.name, weight: h.weight,
-            shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price,
-          }))));
-        } catch {}
+        const etfHoldingsToSave = portfolio.map(h => ({
+          symbol: h.symbol, name: h.name, weight: h.weight,
+          shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price,
+        }));
+        if (portfolioId) {
+          savePortfolioHoldings(portfolioId, etfHoldingsToSave, null).catch(() => {});
+        }
 
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
@@ -739,7 +739,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             className="chart-reset-btn"
             onClick={() => {
               setPortfolioHistoryState([]);
-              localStorage.removeItem(historyKey);
+              if (portfolioId) savePortfolioHoldings(portfolioId, null, []).catch(() => {});
             }}
             title="Grafiek resetten"
           >
