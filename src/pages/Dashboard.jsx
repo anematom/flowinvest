@@ -826,8 +826,10 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             </button>
           ) : (
             <button className="emergency-btn stop" onClick={async () => {
-              await alpacaEmergencyStop();
-              setEmergencyStopped(true);
+              if (confirm('Weet je zeker dat je alle automatische trades wilt stoppen?\n\nJe posities blijven staan, er wordt niks verkocht. Je kunt later weer hervatten.')) {
+                await alpacaEmergencyStop();
+                setEmergencyStopped(true);
+              }
             }}>
               Noodstop — stop alle trades
             </button>
