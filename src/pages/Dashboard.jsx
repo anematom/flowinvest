@@ -622,51 +622,70 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       </div>
 
       {/* Portfolio Allocation — Alpaca posities in paper mode */}
-      {isPaper && alpacaPositions.length > 0 && (
-        <div className="portfolio-section">
-          <h3 className="section-title">Jouw posities</h3>
+      {isPaper && alpacaPositions.length > 0 && (() => {
+        const totalValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
+        return (
+          <div className="portfolio-section">
+            <h3 className="section-title">
+              {`Top ${alpacaPositions.length} Aandelen — $${totalValue.toFixed(0)} belegd`}
+              {alpacaTradeResult && (
+                <span className="mode-badge" style={{ background: '#2196F3' }}>
+                  {alpacaTradeResult.mode.toUpperCase()}
+                </span>
+              )}
+            </h3>
 
-          {/* Pie chart */}
-          <div className="allocation-chart">
-            <PieChart width={160} height={160}>
-              <Pie
-                data={alpacaPositions}
-                dataKey="marketValue"
-                nameKey="symbol"
-                cx="50%"
-                cy="50%"
-                outerRadius={70}
-                innerRadius={40}
-              >
-                {alpacaPositions.map((_, i) => (
-                  <Cell key={i} fill={ULTRA_COLORS[i % ULTRA_COLORS.length]} />
-                ))}
-              </Pie>
-            </PieChart>
-          </div>
+            <div className="ultra-badge-bar">
+              <span className="ultra-badge">MAXIMAAL</span>
+              <span className="ultra-desc">AI selecteert de sterkste aandelen</span>
+            </div>
 
-          {/* Holdings list */}
-          <div className="holdings-list">
-            {alpacaPositions.map((pos, i) => (
-              <div key={pos.symbol} className="holding-card">
-                <div className="holding-left">
-                  <div className="holding-color" style={{ background: ULTRA_COLORS[i % ULTRA_COLORS.length] }} />
-                  <div>
-                    <div className="holding-symbol">{pos.symbol}</div>
-                    <div className="holding-name">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
+            {/* Pie chart */}
+            <div className="allocation-chart">
+              <PieChart width={160} height={160}>
+                <Pie
+                  data={alpacaPositions}
+                  dataKey="marketValue"
+                  nameKey="symbol"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={70}
+                  innerRadius={40}
+                >
+                  {alpacaPositions.map((_, i) => (
+                    <Cell key={i} fill={ULTRA_COLORS[i % ULTRA_COLORS.length]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </div>
+
+            {/* Holdings list */}
+            <div className="holdings-list">
+              {alpacaPositions.map((pos, i) => (
+                <div key={pos.symbol} className="holding-card ultra">
+                  <div className="holding-left">
+                    <div className="holding-rank">#{i + 1}</div>
+                    <div>
+                      <div className="holding-symbol">{pos.symbol}</div>
+                      <div className="holding-name">{pos.symbol}</div>
+                      <div className="holding-desc">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <div className="holding-right">
+                    <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
+                    <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
+                      {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
+                    </div>
+                    <div className="holding-weight">
+                      {totalValue > 0 ? ((pos.marketValue / totalValue) * 100).toFixed(0) : 0}% van inleg
+                    </div>
                   </div>
                 </div>
-                <div className="holding-right">
-                  <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
-                  <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
-                    {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {!isPaper && virtualPortfolio && (
         <div className="portfolio-section">
