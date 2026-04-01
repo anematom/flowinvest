@@ -878,6 +878,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         <MoneyModal
           settings={settings}
           userId={user?.id}
+          portfolioId={settings.id}
           onUpdate={onUpdateSettings}
           onClose={() => setActiveModal(null)}
         />

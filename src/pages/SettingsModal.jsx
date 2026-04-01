@@ -8,7 +8,7 @@ import {
 import '../styles/SettingsModal.css';
 
 // ========== Geldbeheer modal ==========
-export function MoneyModal({ settings, userId, onUpdate, onClose }) {
+export function MoneyModal({ settings, userId, portfolioId, onUpdate, onClose }) {
   const [amount, setAmount] = useState('');
   const [transactions, setTransactions] = useState([]);
   const [autoInvest, setAutoInvest] = useState({ enabled: false, amount: 100 });
@@ -18,7 +18,7 @@ export function MoneyModal({ settings, userId, onUpdate, onClose }) {
   useEffect(() => {
     if (!userId) return;
     Promise.all([
-      dbLoadTransactions(userId),
+      dbLoadTransactions(userId, portfolioId),
       dbLoadAutoInvest(userId),
     ]).then(([txs, auto]) => {
       setTransactions(txs.map(t => ({
@@ -48,7 +48,7 @@ export function MoneyModal({ settings, userId, onUpdate, onClose }) {
   function handleAutoDeposit() {
     const tx = { type: 'auto', amount: autoInvest.amount, label: 'Maandelijkse storting' };
     setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
-    if (userId) dbAddTransaction(userId, tx);
+    if (userId) dbAddTransaction(userId, tx, portfolioId);
     onUpdate({ ...settings, amount: settings.amount + autoInvest.amount });
   }
 
@@ -57,7 +57,7 @@ export function MoneyModal({ settings, userId, onUpdate, onClose }) {
     if (!value || value <= 0) return;
     const tx = { type: 'deposit', amount: value, label: 'Storting' };
     setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
-    if (userId) dbAddTransaction(userId, tx);
+    if (userId) dbAddTransaction(userId, tx, portfolioId);
     onUpdate({ ...settings, amount: settings.amount + value });
     setAmount('');
   }
@@ -67,7 +67,7 @@ export function MoneyModal({ settings, userId, onUpdate, onClose }) {
     if (!value || value <= 0 || value > settings.amount) return;
     const tx = { type: 'withdraw', amount: value, label: 'Opname' };
     setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
-    if (userId) dbAddTransaction(userId, tx);
+    if (userId) dbAddTransaction(userId, tx, portfolioId);
     onUpdate({ ...settings, amount: settings.amount - value });
     setAmount('');
   }
