@@ -83,7 +83,14 @@ function App() {
 
     setPortfolios(prev => {
       const updated = [...prev, newPortfolio];
-      setActiveIndex(updated.length - 1);
+      const newIndex = updated.length - 1;
+      setActiveIndex(newIndex);
+
+      // Wis history en holdings voor het nieuwe portfolio
+      const key = String(newPortfolio.id || newIndex);
+      localStorage.removeItem('flowinvest_history_' + key);
+      localStorage.removeItem('flowinvest_holdings_' + key);
+
       return updated;
     });
     setPage('dashboard');
