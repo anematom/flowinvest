@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchHistory, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade } from '../data/marketApi';
+import { fetchPortfolio, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade } from '../data/marketApi';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
@@ -25,11 +25,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [alpacaAccount, setAlpacaAccount] = useState(null);
   const [alpacaPositions, setAlpacaPositions] = useState([]);
   const [alpacaTradeResult, setAlpacaTradeResult] = useState(null);
-  const [alpacaTrading, setAlpacaTrading] = useState(false);
-  const [selectedETF, setSelectedETF] = useState('SPY');
-  const [etfHistory, setEtfHistory] = useState(null);
   const [liveMode, setLiveMode] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [virtualPortfolio, setVirtualPortfolio] = useState(null);
   const [liveTotals, setLiveTotals] = useState(null);
 
@@ -68,7 +64,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     setLastCheck(null);
     setLastPriceUpdate(null);
     prevValueRef.current = null;
-  }, [historyKey, holdingsKey]);
+  }, [historyKey]);
 
   // Alpaca data laden en auto-traden in paper mode
   useEffect(() => {
@@ -217,6 +213,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
         setLiveTotals(totals);
+        if (portfolio) runTechnicalAnalysis(portfolio);
 
         // 3. Genereer AI-bericht
         const message = getUltraMessage(analysis, portfolio, totals.totalGainPercent);
@@ -296,6 +293,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
         setLiveTotals(totals);
+        if (portfolio) runTechnicalAnalysis(portfolio);
 
         // 4. Check herbalancering
         const rebalanceTrades = calculateRebalance(portfolio, smartAllocation, totals.totalValue);
@@ -323,8 +321,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           ...prev.slice(0, 19),
         ]);
       }
-      // Technische analyse uitvoeren na smart check
-      if (portfolio) runTechnicalAnalysis(portfolio);
     } catch {
       // Server niet bereikbaar
     }
@@ -420,14 +416,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     };
   }, [liveMode, virtualPortfolio, refreshPrices]);
 
-  // Fetch ETF history when selected
-  useEffect(() => {
-    if (!liveMode || !selectedETF) return;
-    fetchHistory(selectedETF, 12)
-      .then(result => setEtfHistory(result.data))
-      .catch(() => setEtfHistory(null));
-  }, [liveMode, selectedETF]);
-
   const goalLabels = {
     starter: 'Beginnen met beleggen',
     target: 'Sparen voor een doel',
@@ -450,7 +438,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   };
 
   // Summary — paper trading gebruikt dezelfde berekening als simulatie
-  const isPaper = brokerMode === 'paper';
   let summary;
   if (liveTotals) {
     summary = {
@@ -652,8 +639,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             {virtualPortfolio.map((holding, i) => (
               <button
                 key={holding.symbol}
-                className={`holding-card ${selectedETF === holding.symbol ? 'selected' : ''} ${isUltraMode(settings.risk) ? 'ultra' : ''}`}
-                onClick={() => setSelectedETF(holding.symbol)}
+                className={`holding-card ${isUltraMode(settings.risk) ? 'ultra' : ''}`}
               >
                 <div className="holding-left">
                   {isUltraMode(settings.risk) ? (
@@ -689,9 +675,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       {/* Loading/Error for live mode */}
       {!virtualPortfolio && (
         <div className="market-section">
-          {loading ? (
-            <div className="loading-card">AI analyseert de markt...</div>
-          ) : !marketData ? (
+          {!marketData ? (
             <div className="error-card">
               Kan geen verbinding maken met de server.<br />
               Start de backend met: <code>node server/index.js</code>

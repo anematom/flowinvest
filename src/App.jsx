@@ -102,7 +102,11 @@ function App() {
     updated[activeIndex] = { ...updated[activeIndex], ...newSettings };
     setPortfolios(updated);
     if (user) {
-      await savePortfolio(user.id, updated[activeIndex]);
+      try {
+        await savePortfolio(user.id, updated[activeIndex]);
+      } catch (err) {
+        console.error('Fout bij opslaan portfolio:', err);
+      }
     }
   }
 
@@ -123,7 +127,11 @@ function App() {
     setPortfolios(updated);
     setActiveIndex(0);
     if (toDelete.id) {
-      await deletePortfolio(toDelete.id);
+      try {
+        await deletePortfolio(toDelete.id);
+      } catch (err) {
+        console.error('Fout bij verwijderen portfolio:', err);
+      }
     }
   }
 

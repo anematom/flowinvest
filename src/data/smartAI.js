@@ -195,7 +195,7 @@ export function getUltraMessage(analysis, portfolio, totalGainPercent) {
     return {
       type: 'positive',
       title: 'Markt herstelt — terug naar vol gas',
-      message: `De markt stijgt ${avgChange.toFixed(1)}%! Je portfolio is terug naar 100% aandelen om maximaal te profiteren. ${bestStock.symbol} is de sterkste (+${bestStock.changePercent.toFixed(1)}%).`,
+      message: `De markt stijgt ${avgChange.toFixed(1)}%! Je portfolio is terug naar 100% aandelen om maximaal te profiteren. ${bestStock.symbol} is de sterkste (+${bestStock.changePercent?.toFixed(1) || '0'}%).`,
     };
   }
 
@@ -203,7 +203,7 @@ export function getUltraMessage(analysis, portfolio, totalGainPercent) {
     return {
       type: 'positive',
       title: 'Sterke dag!',
-      message: `${winners} van de 10 aandelen stijgen. ${bestStock.symbol} is de beste (+${bestStock.changePercent.toFixed(1)}%). Je geld zit 100% in de top 5 performers.`,
+      message: `${winners} van de 10 aandelen stijgen. ${bestStock.symbol} is de beste (+${bestStock.changePercent?.toFixed(1) || '0'}%). Je geld zit 100% in de top 5 performers.`,
     };
   }
 
@@ -211,7 +211,7 @@ export function getUltraMessage(analysis, portfolio, totalGainPercent) {
     return {
       type: 'good',
       title: 'Markt is positief',
-      message: `${winners} stijgers, ${losers} dalers. Beste: ${bestStock.symbol} (+${bestStock.changePercent.toFixed(1)}%). 100% in aandelen — de AI focust op de winnaars.`,
+      message: `${winners} stijgers, ${losers} dalers. Beste: ${bestStock.symbol} (+${bestStock.changePercent?.toFixed(1) || '0'}%). 100% in aandelen — de AI focust op de winnaars.`,
     };
   }
 

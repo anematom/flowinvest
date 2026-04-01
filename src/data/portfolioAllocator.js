@@ -35,7 +35,7 @@ export function buildPortfolio(amount, riskLevel, quotes) {
     }
 
     const invested = amount * item.weight;
-    const shares = invested / quote.previousClose;
+    const shares = invested / quote.price;
     const currentValue = shares * quote.price;
     const gain = currentValue - invested;
     const gainPercent = invested > 0 ? ((gain / invested) * 100) : 0;
@@ -80,7 +80,7 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   const portfolio = top5.map((stock, i) => {
     const stockWeight = weights[i] || 0.10;
     const invested = stockAmount * stockWeight;
-    const shares = invested / stock.previousClose;
+    const shares = invested / stock.price;
     const currentValue = shares * stock.price;
     const gain = currentValue - invested;
     const gainPercent = invested > 0 ? ((gain / invested) * 100) : 0;
