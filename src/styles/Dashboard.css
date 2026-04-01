@@ -219,30 +219,30 @@
 }
 
 .emergency-btn.stop {
-  background: #FFEBEE;
-  color: #C62828;
-  border: 2px solid #F44336;
+  background: white;
+  color: #78909C;
+  border: 2px solid #E0E0E0;
 }
 
 .emergency-btn.stop:hover {
-  background: #F44336;
-  color: white;
+  border-color: #FF9800;
+  color: #E65100;
 }
 
 .emergency-btn.resume {
-  background: #E8F5E9;
-  color: #2E7D32;
-  border: 2px solid #4CAF50;
+  background: #FFF3E0;
+  color: #E65100;
+  border: 2px solid #FF9800;
 }
 
 .emergency-btn.resume:hover {
-  background: #4CAF50;
+  background: #FF9800;
   color: white;
 }
 
 .emergency-info {
   font-size: 13px;
-  color: #C62828;
+  color: #E65100;
   margin-top: 8px;
 }
 
