@@ -265,7 +265,7 @@ app.post('/api/chat', async (req, res) => {
     const { message, portfolioContext } = req.body;
     if (!message) return res.status(400).json({ error: 'Geen bericht' });
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     let prompt = SYSTEM_PROMPT;
     if (portfolioContext) {
