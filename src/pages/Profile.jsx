@@ -43,8 +43,11 @@ export default function Profile({ user, portfolios, activeIndex, onNavigate, onL
     setEditingId(null);
   }
 
+  const hasPaperPortfolio = portfolios.some(p => p.broker_mode === 'paper');
+
   function handleCreatePortfolio() {
     if (!newName.trim()) return;
+    if (newMode === 'paper' && hasPaperPortfolio) return;
     onAddPortfolio(newName.trim(), newMode);
     setShowNewPortfolio(false);
     setNewName('');
@@ -150,12 +153,13 @@ export default function Profile({ user, portfolios, activeIndex, onNavigate, onL
             </button>
             <button
               className={`mode-option ${newMode === 'paper' ? 'selected' : ''}`}
-              onClick={() => setNewMode('paper')}
+              onClick={() => !hasPaperPortfolio && setNewMode('paper')}
+              disabled={hasPaperPortfolio}
             >
-              <span className="mode-option-dot" style={{ background: '#FF9800' }} />
+              <span className="mode-option-dot" style={{ background: hasPaperPortfolio ? '#E0E0E0' : '#FF9800' }} />
               <div>
                 <span className="mode-option-title">Paper Trading</span>
-                <span className="mode-option-desc">Oefen met virtueel geld via een echte broker</span>
+                <span className="mode-option-desc">{hasPaperPortfolio ? 'Je hebt al een paper trading portfolio' : 'Oefen met virtueel geld via een echte broker'}</span>
               </div>
             </button>
             <button
