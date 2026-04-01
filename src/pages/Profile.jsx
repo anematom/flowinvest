@@ -9,9 +9,9 @@ const modeLabels = {
 };
 
 const modeColors = {
-  simulation: '#4CAF50',
-  paper: '#FF9800',
-  live: '#F44336',
+  simulation: '#2196F3',
+  paper: '#9C27B0',
+  live: '#4CAF50',
 };
 
 export default function Profile({ user, portfolios, activeIndex, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio }) {
@@ -145,7 +145,7 @@ export default function Profile({ user, portfolios, activeIndex, onNavigate, onL
               className={`mode-option ${newMode === 'simulation' ? 'selected' : ''}`}
               onClick={() => setNewMode('simulation')}
             >
-              <span className="mode-option-dot" style={{ background: '#4CAF50' }} />
+              <span className="mode-option-dot" style={{ background: '#2196F3' }} />
               <div>
                 <span className="mode-option-title">Simulatie</span>
                 <span className="mode-option-desc">Oefen met nepgeld en echte koersen</span>
@@ -156,7 +156,7 @@ export default function Profile({ user, portfolios, activeIndex, onNavigate, onL
               onClick={() => !hasPaperPortfolio && setNewMode('paper')}
               disabled={hasPaperPortfolio}
             >
-              <span className="mode-option-dot" style={{ background: hasPaperPortfolio ? '#E0E0E0' : '#FF9800' }} />
+              <span className="mode-option-dot" style={{ background: hasPaperPortfolio ? '#E0E0E0' : '#9C27B0' }} />
               <div>
                 <span className="mode-option-title">Paper Trading</span>
                 <span className="mode-option-desc">{hasPaperPortfolio ? 'Je hebt al een paper trading portfolio' : 'Oefen met virtueel geld via een echte broker'}</span>

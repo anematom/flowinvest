@@ -58,15 +58,15 @@
 }
 
 .portfolio-tab.active {
-  border-color: #4CAF50;
+  border-color: #2196F3;
   background: #E3F2FD;
-  color: #2E7D32;
+  color: #1565C0;
 }
 
-.portfolio-tab.paper {
-  border-color: #FF9800;
-  background: #FFF3E0;
-  color: #E65100;
+.portfolio-tab.broker {
+  border-color: #9C27B0;
+  background: #F3E5F5;
+  color: #7B1FA2;
 }
 
 .tab-mode-dot {
@@ -78,12 +78,12 @@
 }
 
 .tab-mode-dot.paper {
-  background: #FF9800;
+  background: #9C27B0;
 }
 
 .portfolio-tab.add-tab {
   border-style: dashed;
-  color: #4CAF50;
+  color: #2196F3;
   font-size: 16px;
   padding: 8px 14px;
 }
@@ -200,11 +200,35 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .chart-card h3 {
   font-size: 16px;
   font-weight: 600;
   color: #263238;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+.chart-reset-btn {
+  background: none;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  color: #90A4AE;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chart-reset-btn:hover {
+  border-color: #F44336;
+  color: #F44336;
 }
 
 .chart-container {
@@ -897,13 +921,13 @@
 }
 
 .dashboard-mode-badge.paper {
-  background: #FFF3E0;
-  color: #E65100;
+  background: #F3E5F5;
+  color: #7B1FA2;
 }
 
 .dashboard-mode-badge.live {
-  background: #FFEBEE;
-  color: #C62828;
+  background: #E8F5E9;
+  color: #2E7D32;
 }
 
 /* Alpaca card */

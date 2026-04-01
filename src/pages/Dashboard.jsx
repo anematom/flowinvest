@@ -496,7 +496,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
               className={`portfolio-tab ${i === activeIndex ? 'active' : ''} ${(p.broker_mode || 'simulation') !== 'simulation' ? 'broker' : ''}`}
               onClick={() => onSwitchPortfolio(i)}
             >
-              <span className="tab-mode-dot" style={{ background: p.broker_mode === 'paper' ? '#FF9800' : p.broker_mode === 'live' ? '#F44336' : '#4CAF50' }} />
+              <span className="tab-mode-dot" style={{ background: p.broker_mode === 'paper' ? '#9C27B0' : p.broker_mode === 'live' ? '#4CAF50' : '#2196F3' }} />
               {p.name || `Portfolio ${i + 1}`}
             </button>
           ))}
@@ -702,7 +702,19 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
       {/* Chart */}
       <div className="chart-card">
-        <h3>Portfolio verloop</h3>
+        <div className="chart-header">
+          <h3>Portfolio verloop</h3>
+          <button
+            className="chart-reset-btn"
+            onClick={() => {
+              setPortfolioHistoryState([]);
+              localStorage.removeItem(historyKey);
+            }}
+            title="Grafiek resetten"
+          >
+            Reset
+          </button>
+        </div>
         <div className="chart-container">
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
