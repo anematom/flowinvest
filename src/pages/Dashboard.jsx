@@ -822,20 +822,20 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
               await alpacaEmergencyResume();
               setEmergencyStopped(false);
             }}>
-              Hervat automatisch handelen
+              Hervat automatisch beleggen
             </button>
           ) : (
             <button className="emergency-btn stop" onClick={async () => {
-              if (confirm('Weet je zeker dat je alle automatische trades wilt stoppen?\n\nJe posities blijven staan, er wordt niks verkocht. Je kunt later weer hervatten.')) {
+              if (confirm('Weet je zeker dat je wilt pauzeren?\n\nDe AI stopt tijdelijk met handelen. Je beleggingen blijven gewoon staan. Je kunt op elk moment weer hervatten.')) {
                 await alpacaEmergencyStop();
                 setEmergencyStopped(true);
               }
             }}>
-              Noodstop — stop alle trades
+              Pauzeer automatisch beleggen
             </button>
           )}
           {emergencyStopped && (
-            <p className="emergency-info">Automatisch handelen is gestopt. Je posities blijven staan.</p>
+            <p className="emergency-info">Automatisch beleggen is gepauzeerd. Je beleggingen blijven gewoon staan.</p>
           )}
         </div>
       )}
