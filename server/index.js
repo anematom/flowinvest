@@ -453,8 +453,12 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 
     const equity = parseFloat(account.equity);
     const cash = parseFloat(account.cash);
-    const targetStockValue = equity * stockFraction;
-    const targetBondValue = equity * bondFraction;
+    // Gebruik het inlegbedrag, niet de hele account
+    const budget = amount ? parseFloat(amount) : equity;
+    const currentPositionValue = positions.reduce((sum, p) => sum + parseFloat(p.market_value), 0);
+    const availableBudget = Math.min(budget, cash + currentPositionValue);
+    const targetStockValue = availableBudget * stockFraction;
+    const targetBondValue = availableBudget * bondFraction;
 
     // 4. Top 5 aandelen op basis van momentum
     const top5 = validQuotes
@@ -498,9 +502,11 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       }
     }
 
-    // 6. Koop top 5 aandelen als er cash is
-    if (cash > 10) {
-      const stockBudget = Math.min(cash, targetStockValue) * 0.95; // 5% buffer
+    // 6. Koop top 5 aandelen als er cash is en budget niet overschreden
+    const alreadyInvested = currentPositionValue;
+    const remainingBudget = Math.max(0, availableBudget - alreadyInvested);
+    if (cash > 10 && remainingBudget > 1) {
+      const stockBudget = Math.min(cash, remainingBudget, targetStockValue) * 0.95;
 
       for (let i = 0; i < top5.length; i++) {
         const stock = top5[i];

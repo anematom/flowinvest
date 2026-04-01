@@ -104,7 +104,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     // Auto-trade elke 10 minuten
     async function runAutoTrade() {
       try {
-        const result = await alpacaAutoTrade(settings.risk);
+        const result = await alpacaAutoTrade(settings.risk, settings.amount);
         setAlpacaTradeResult(result);
         loadAlpaca(); // Herlaad data na trades
       } catch (err) {
