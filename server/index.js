@@ -241,7 +241,7 @@ app.get('/api/market-status', async (req, res) => {
 // ============================================
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAitYciOh57tu_OWy6r0JmBYEGZ7PdJ_Zw';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBDz-nDbUN982702bg7g3ZEPVSKxJsO21k';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const SYSTEM_PROMPT = `Je bent de FlowInvest AI-assistent, een vriendelijke en kalme beleggingsadviseur.
