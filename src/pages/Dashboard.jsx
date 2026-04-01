@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchHistory, fetchStocks, fetchStockHistory } from '../data/marketApi';
+import { fetchPortfolio, fetchHistory, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions } from '../data/marketApi';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
@@ -20,8 +20,10 @@ const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
 const CHECK_INTERVAL = 10 * 60 * 1000; // 10 minuten
 const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
-export default function Dashboard({ settings, user, portfolios, activeIndex, onNavigate, onUpdateSettings, onSwitchPortfolio, onAddPortfolio, onDeletePortfolio }) {
+export default function Dashboard({ settings, user, portfolios, activeIndex, brokerMode, onNavigate, onUpdateSettings, onSwitchPortfolio, onAddPortfolio, onDeletePortfolio }) {
   const [marketData, setMarketData] = useState(null);
+  const [alpacaAccount, setAlpacaAccount] = useState(null);
+  const [alpacaPositions, setAlpacaPositions] = useState([]);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
   const [liveMode, setLiveMode] = useState(true);
@@ -66,6 +68,26 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     setLastPriceUpdate(null);
     prevValueRef.current = null;
   }, [historyKey, holdingsKey]);
+
+  // Alpaca data laden in paper mode
+  useEffect(() => {
+    if (brokerMode !== 'paper') return;
+    async function loadAlpaca() {
+      try {
+        const [account, positions] = await Promise.all([
+          fetchAlpacaAccount(),
+          fetchAlpacaPositions(),
+        ]);
+        setAlpacaAccount(account);
+        setAlpacaPositions(positions);
+      } catch (err) {
+        console.error('Alpaca laden mislukt:', err);
+      }
+    }
+    loadAlpaca();
+    const interval = setInterval(loadAlpaca, 30000); // elke 30 sec
+    return () => clearInterval(interval);
+  }, [brokerMode]);
 
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
@@ -527,9 +549,64 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
       )}
 
 
+      {/* Modus indicator */}
+      <div className="mode-indicator">
+        <span className={`mode-label ${brokerMode}`}>
+          {brokerMode === 'paper' ? '🔶 Paper Trading' : '🟢 Simulatie'}
+        </span>
+      </div>
+
+      {/* Alpaca account — paper trading */}
+      {brokerMode === 'paper' && alpacaAccount && (
+        <div className="alpaca-card">
+          <p className="balance-label">Alpaca Paper Account</p>
+          <h1 className="balance-amount">
+            ${alpacaAccount.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          </h1>
+          <div className="alpaca-stats">
+            <div className="alpaca-stat">
+              <span className="alpaca-stat-label">Cash</span>
+              <span className="alpaca-stat-value">${alpacaAccount.cash.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="alpaca-stat">
+              <span className="alpaca-stat-label">Koopkracht</span>
+              <span className="alpaca-stat-value">${alpacaAccount.buyingPower.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          {alpacaPositions.length > 0 && (
+            <>
+              <h3 className="section-title" style={{ marginTop: 16 }}>Posities</h3>
+              <div className="holdings-list">
+                {alpacaPositions.map(pos => (
+                  <div key={pos.symbol} className="holding-card">
+                    <div className="holding-left">
+                      <div>
+                        <div className="holding-symbol">{pos.symbol}</div>
+                        <div className="holding-name">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <div className="holding-right">
+                      <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
+                      <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
+                        {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {alpacaPositions.length === 0 && (
+            <p className="alpaca-empty">Je hebt nog geen posities. De AI zal automatisch beginnen met handelen.</p>
+          )}
+        </div>
+      )}
+
       {/* Balance card */}
       <div className="balance-card">
-        <p className="balance-label">Jouw vermogen</p>
+        <p className="balance-label">{brokerMode === 'paper' ? 'Simulatie vermogen' : 'Jouw vermogen'}</p>
         <h1 className={`balance-amount ${priceFlash ? `flash-${priceFlash}` : ''}`}>
           €{summary.currentValue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>

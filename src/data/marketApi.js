@@ -36,6 +36,45 @@ export async function fetchTopStocks(count = 5) {
   return res.json();
 }
 
+// ========== Alpaca ==========
+export async function fetchAlpacaAccount() {
+  const res = await fetch(`${API_BASE}/alpaca/account`);
+  if (!res.ok) throw new Error('Failed to fetch Alpaca account');
+  return res.json();
+}
+
+export async function fetchAlpacaPositions() {
+  const res = await fetch(`${API_BASE}/alpaca/positions`);
+  if (!res.ok) throw new Error('Failed to fetch Alpaca positions');
+  return res.json();
+}
+
+export async function alpacaBuy(symbol, amount) {
+  const res = await fetch(`${API_BASE}/alpaca/buy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbol, amount }),
+  });
+  if (!res.ok) throw new Error('Failed to buy');
+  return res.json();
+}
+
+export async function alpacaSell(symbol, qty) {
+  const res = await fetch(`${API_BASE}/alpaca/sell`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbol, qty }),
+  });
+  if (!res.ok) throw new Error('Failed to sell');
+  return res.json();
+}
+
+export async function fetchAlpacaOrders() {
+  const res = await fetch(`${API_BASE}/alpaca/orders`);
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
 export async function fetchStockHistory(symbols, months = 3) {
   const query = symbols ? `?symbols=${symbols.join(',')}&months=${months}` : `?months=${months}`;
   const res = await fetch(`${API_BASE}/stocks/history${query}`);

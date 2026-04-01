@@ -838,6 +838,76 @@
   color: #F44336;
 }
 
+/* Modus indicator */
+.mode-indicator {
+  text-align: center;
+  padding: 8px 16px 0;
+}
+
+.mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+.mode-label.simulation {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+
+.mode-label.paper {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+/* Alpaca card */
+.alpaca-card {
+  background: white;
+  border-radius: 20px;
+  padding: 24px 20px;
+  margin: 12px 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border-left: 4px solid #FF9800;
+}
+
+.alpaca-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.alpaca-stat {
+  flex: 1;
+  background: #F7F9F8;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.alpaca-stat-label {
+  display: block;
+  font-size: 11px;
+  color: #78909C;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.alpaca-stat-value {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #263238;
+  margin-top: 2px;
+}
+
+.alpaca-empty {
+  font-size: 13px;
+  color: #78909C;
+  text-align: center;
+  margin-top: 16px;
+}
+
 /* Trading signalen */
 .signals-card {
   margin: 0 16px 16px;

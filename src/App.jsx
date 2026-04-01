@@ -13,6 +13,16 @@ function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [page, setPage] = useState('loading');
   const [onboardingName, setOnboardingName] = useState(null);
+  const [brokerMode, setBrokerMode] = useState(() => {
+    try { return localStorage.getItem('flowinvest_broker_mode') || 'simulation'; }
+    catch { return 'simulation'; }
+  });
+
+  function handleSetBrokerMode(mode) {
+    if (mode === 'live') return; // Live nog niet beschikbaar
+    setBrokerMode(mode);
+    localStorage.setItem('flowinvest_broker_mode', mode);
+  }
 
   const activePortfolio = portfolios[activeIndex] || null;
 
@@ -160,10 +170,12 @@ function App() {
       <Profile
         user={user}
         portfolios={portfolios}
+        brokerMode={brokerMode}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         onUpdatePortfolios={setPortfolios}
         onDeletePortfolio={handleDeletePortfolio}
+        onSetBrokerMode={handleSetBrokerMode}
       />
     );
   }
@@ -174,6 +186,7 @@ function App() {
       user={user}
       portfolios={portfolios}
       activeIndex={activeIndex}
+      brokerMode={brokerMode}
       onNavigate={handleNavigate}
       onUpdateSettings={handleUpdateSettings}
       onSwitchPortfolio={handleSwitchPortfolio}

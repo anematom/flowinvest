@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { savePortfolio } from '../data/supabase';
 import '../styles/Profile.css';
 
-export default function Profile({ user, portfolios, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio }) {
+export default function Profile({ user, portfolios, brokerMode, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onSetBrokerMode }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
 
@@ -28,6 +28,18 @@ export default function Profile({ user, portfolios, onNavigate, onLogout, onUpda
     setEditingId(null);
   }
 
+  const modeLabels = {
+    simulation: 'Simulatie',
+    paper: 'Paper Trading',
+    live: 'Live Trading',
+  };
+
+  const modeDescriptions = {
+    simulation: 'Oefen met nepgeld en echte koersen',
+    paper: 'Oefen met $100.000 virtueel geld via Alpaca',
+    live: 'Beleg met echt geld via Alpaca',
+  };
+
   return (
     <div className="profile-page">
       <div className="profile-header">
@@ -51,6 +63,33 @@ export default function Profile({ user, portfolios, onNavigate, onLogout, onUpda
           </span>
         </div>
       </div>
+
+      {/* Broker koppeling */}
+      <h2 className="profile-section-title">Beleggingsmodus</h2>
+      <div className="profile-card">
+        {['simulation', 'paper', 'live'].map(mode => (
+          <button
+            key={mode}
+            className={`profile-row broker-option ${brokerMode === mode ? 'active' : ''}`}
+            onClick={() => onSetBrokerMode(mode)}
+          >
+            <div className="broker-option-left">
+              <span className={`broker-dot ${brokerMode === mode ? 'active' : ''}`} />
+              <div>
+                <span className="profile-value">{modeLabels[mode]}</span>
+                <span className="portfolio-detail">{modeDescriptions[mode]}</span>
+              </div>
+            </div>
+            {mode === 'live' && <span className="broker-badge">Binnenkort</span>}
+          </button>
+        ))}
+      </div>
+
+      {brokerMode === 'paper' && (
+        <div className="broker-info">
+          Je bent verbonden met Alpaca Paper Trading. Je hebt $100.000 virtueel geld om mee te oefenen.
+        </div>
+      )}
 
       {/* Portfolio beheer */}
       <h2 className="profile-section-title">Mijn portfolio's</h2>
