@@ -297,10 +297,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         try {
           localStorage.setItem(holdingsKey, JSON.stringify(portfolio.map(h => ({
             symbol: h.symbol, name: h.name, weight: h.weight,
-              shares: h.shares, invested: h.invested, buyPrice: h.price,
-            }))));
-          } catch {}
-        }
+            shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price,
+          }))));
+        } catch {}
 
         setVirtualPortfolio(portfolio);
         const totals = getPortfolioTotals(portfolio, settings.amount);
