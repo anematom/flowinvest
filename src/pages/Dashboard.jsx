@@ -80,18 +80,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setAlpacaAccount(account);
         setAlpacaPositions(positions);
         setEmergencyStopped(emergencyStatus.stopped);
-
-        // Sla snapshot op voor grafiek
-        if (account.equity) {
-          const now = new Date();
-          setPortfolioHistory(prev => {
-            const snapshot = {
-              date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-              value: parseFloat(account.equity.toFixed(2)),
-            };
-            return [...prev, snapshot].slice(-200);
-          });
-        }
       } catch (err) {
         console.error('Alpaca laden mislukt:', err);
       }
