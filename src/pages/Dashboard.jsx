@@ -215,15 +215,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         let savedHoldings = null;
         try { savedHoldings = JSON.parse(localStorage.getItem(holdingsKey)); } catch {}
 
-        // Check of opgeslagen holdings bij huidige inleg passen
-        if (savedHoldings) {
-          const savedTotal = savedHoldings.reduce((sum, h) => sum + (h.invested || 0), 0);
-          if (Math.abs(savedTotal - settings.amount) > settings.amount * 0.3) {
-            savedHoldings = null;
-            localStorage.removeItem(holdingsKey);
-          }
-        }
-
         // Altijd nieuw portfolio bouwen met huidige top 5
         const freshPortfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
 
@@ -305,15 +296,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         // 3. Bouw portfolio met huidige allocatie — behoud aankoopprijzen
         let savedETF = null;
         try { savedETF = JSON.parse(localStorage.getItem(holdingsKey)); } catch {}
-
-        // Check of opgeslagen holdings bij huidige inleg passen
-        if (savedETF) {
-          const savedTotal = savedETF.reduce((sum, h) => sum + (h.invested || 0), 0);
-          if (Math.abs(savedTotal - settings.amount) > settings.amount * 0.3) {
-            savedETF = null;
-            localStorage.removeItem(holdingsKey);
-          }
-        }
 
         const allocArray = Object.entries(smartAllocation).map(([symbol, weight]) => {
           const quote = quotes.find(q => q.symbol === symbol);
