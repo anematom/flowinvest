@@ -123,6 +123,28 @@ export async function addTransaction(userId, tx, portfolioId) {
   if (error) throw error;
 }
 
+// ========== Alpaca Keys ==========
+export async function loadAlpacaKeys(userId) {
+  const { data, error } = await supabase
+    .from('alpaca_keys')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+export async function saveAlpacaKeys(userId, apiKey, secretKey) {
+  const { error } = await supabase
+    .from('alpaca_keys')
+    .upsert({
+      user_id: userId,
+      api_key: apiKey,
+      secret_key: secretKey,
+    }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
 // ========== Auto Invest ==========
 export async function loadAutoInvest(userId) {
   const { data, error } = await supabase

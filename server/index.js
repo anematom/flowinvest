@@ -504,12 +504,37 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       return res.json({ action: 'stopped', reason: 'Noodstop is actief', trades: [] });
     }
 
-    const { risk = 'ultra', amount } = req.body;
+    const { risk = 'ultra', amount, alpacaKeys: userKeys } = req.body;
+
+    // Gebruik user-specifieke keys als beschikbaar
+    const useKey = userKeys?.apiKey || ALPACA_KEY;
+    const useSecret = userKeys?.secretKey || ALPACA_SECRET;
+    if (!useKey || !useSecret) {
+      return res.json({ action: 'skip', reason: 'Geen Alpaca keys geconfigureerd', trades: [] });
+    }
+
+    // User-specifieke Alpaca fetch
+    async function userAlpacaFetch(endpoint, options = {}) {
+      const r = await fetch(`${ALPACA_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          'APCA-API-KEY-ID': useKey,
+          'APCA-API-SECRET-KEY': useSecret,
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
+      if (!r.ok) {
+        const err = await r.text();
+        throw new Error(`Alpaca error ${r.status}: ${err}`);
+      }
+      return r.json();
+    }
 
     // 1. Haal account info en huidige posities op
     const [account, positions, stockQuotes] = await Promise.all([
-      alpacaFetch('/account'),
-      alpacaFetch('/positions'),
+      userAlpacaFetch('/account'),
+      userAlpacaFetch('/positions'),
       Promise.all(
         MOMENTUM_STOCKS.map(async (stock) => {
           try {
@@ -549,6 +574,18 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     const targetStockValue = availableBudget * stockFraction;
     const targetBondValue = availableBudget * bondFraction;
 
+    // User-specifieke placeOrder
+    async function userPlaceOrder(orderBody, reason) {
+      if (emergencyStop) return { skipped: true, reason: 'Noodstop actief' };
+      if (!checkRateLimit()) return { skipped: true, reason: 'Max orders per uur bereikt' };
+      const result = await userAlpacaFetch('/orders', {
+        method: 'POST',
+        body: JSON.stringify(orderBody),
+      });
+      logTrade({ symbol: orderBody.symbol, side: orderBody.side, qty: orderBody.qty || null, notional: orderBody.notional || null, reason, orderId: result.id, status: result.status });
+      return result;
+    }
+
     // 4. Top 5 aandelen op basis van momentum
     const top5 = validQuotes
       .sort((a, b) => b.changePercent - a.changePercent)
@@ -564,7 +601,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 
       if (plPercent <= TRADE_THRESHOLDS.stopLoss) {
         try {
-          const result = await placeOrder(
+          const result = await userPlaceOrder(
             { symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
             `Stop-loss: ${plPercent.toFixed(1)}% verlies`
           );
@@ -576,7 +613,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       if (plPercent >= TRADE_THRESHOLDS.takeProfit) {
         const sellQty = (parseFloat(pos.qty) / 2).toFixed(4);
         try {
-          const result = await placeOrder(
+          const result = await userPlaceOrder(
             { symbol, qty: sellQty, side: 'sell', type: 'market', time_in_force: 'day' },
             `Take-profit: +${plPercent.toFixed(1)}% winst`
           );
@@ -605,7 +642,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
           if (toBuy < 1) continue;
 
           try {
-            const result = await placeOrder(
+            const result = await userPlaceOrder(
               { symbol: stock.symbol, notional: toBuy.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
               `Top ${i + 1} momentum`
             );
@@ -619,7 +656,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
         const bondBudget = Math.min(cash, targetBondValue) * 0.95;
         if (bondBudget > 1) {
           try {
-            const result = await placeOrder(
+            const result = await userPlaceOrder(
               { symbol: 'BND', notional: bondBudget.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
               `${mode} modus — ${Math.round(bondFraction * 100)}% obligaties`
             );
@@ -635,7 +672,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       for (const pos of positions) {
         if (pos.symbol !== 'BND' && !top5Symbols.includes(pos.symbol)) {
           try {
-            const result = await placeOrder(
+            const result = await userPlaceOrder(
               { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
               'Niet meer in top 5'
             );
@@ -648,7 +685,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       const bndPosition = positions.find(p => p.symbol === 'BND');
       if (bndPosition && bondFraction === 0) {
         try {
-          const result = await placeOrder(
+          const result = await userPlaceOrder(
             { symbol: 'BND', qty: bndPosition.qty, side: 'sell', type: 'market', time_in_force: 'day' },
             'Terug naar 100% aandelen'
           );

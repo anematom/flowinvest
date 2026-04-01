@@ -1,0 +1,159 @@
+.alpaca-setup {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #F7F9F8;
+}
+
+.setup-progress {
+  height: 4px;
+  background: #E3F2FD;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.setup-progress-fill {
+  height: 100%;
+  background: #4CAF50;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.4s ease;
+}
+
+.setup-content {
+  flex: 1;
+  padding: 32px 24px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.setup-back {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.setup-content h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #263238;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.setup-text p {
+  font-size: 15px;
+  color: #546E7A;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.setup-link {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #4CAF50;
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+
+.setup-link:hover {
+  background: #43A047;
+}
+
+.setup-inputs {
+  margin-top: 16px;
+}
+
+.setup-inputs label {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.setup-inputs label span {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #263238;
+  margin-bottom: 6px;
+}
+
+.setup-inputs input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.setup-inputs input:focus {
+  border-color: #4CAF50;
+}
+
+.setup-error {
+  background: #FFEBEE;
+  color: #C62828;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.setup-footer {
+  padding: 16px 24px 32px;
+  position: sticky;
+  bottom: 0;
+  background: #F7F9F8;
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.setup-btn {
+  width: 100%;
+  padding: 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-bottom: 12px;
+}
+
+.setup-btn:hover {
+  background: #43A047;
+}
+
+.setup-btn:disabled {
+  background: #C8E6C9;
+  cursor: not-allowed;
+}
+
+.setup-cancel {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: #90A4AE;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+}

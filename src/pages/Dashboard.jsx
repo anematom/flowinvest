@@ -20,7 +20,7 @@ const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
 const CHECK_INTERVAL = 10 * 60 * 1000; // 10 minuten
 const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
-export default function Dashboard({ settings, user, portfolios, activeIndex, brokerMode, onNavigate, onUpdateSettings, onSwitchPortfolio, onAddPortfolio, onDeletePortfolio }) {
+export default function Dashboard({ settings, user, portfolios, activeIndex, brokerMode, alpacaKeys, onNavigate, onUpdateSettings, onSwitchPortfolio, onAddPortfolio, onDeletePortfolio }) {
   const [marketData, setMarketData] = useState(null);
   const [alpacaAccount, setAlpacaAccount] = useState(null);
   const [alpacaPositions, setAlpacaPositions] = useState([]);
@@ -102,7 +102,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     // Auto-trade elke 10 minuten
     async function runAutoTrade() {
       try {
-        const result = await alpacaAutoTrade(settings.risk, settings.amount);
+        const result = await alpacaAutoTrade(settings.risk, settings.amount, alpacaKeys);
         setAlpacaTradeResult(result);
         loadAlpaca(); // Herlaad data na trades
       } catch (err) {

@@ -4,7 +4,8 @@ import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
 import Profile from './pages/Profile';
-import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut } from './data/supabase';
+import AlpacaSetup from './pages/AlpacaSetup';
+import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut, loadAlpacaKeys, saveAlpacaKeys } from './data/supabase';
 import './App.css';
 
 function App() {
@@ -13,6 +14,8 @@ function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [page, setPage] = useState('loading');
   const [onboardingMode, setOnboardingMode] = useState(null); // { name, brokerMode }
+  const [alpacaKeys, setAlpacaKeys] = useState(null);
+  const [showAlpacaSetup, setShowAlpacaSetup] = useState(false);
 
   const activePortfolio = portfolios[activeIndex] || null;
 
@@ -41,9 +44,14 @@ function App() {
 
   async function loadData(userId) {
     try {
-      const data = await loadPortfolios(userId);
+      // Laad portfolios en Alpaca keys parallel
+      const [data, keys] = await Promise.all([
+        loadPortfolios(userId),
+        loadAlpacaKeys(userId).catch(() => null),
+      ]);
+      if (keys) setAlpacaKeys(keys);
+
       if (data.length > 0) {
-        // Zorg dat elk portfolio een broker_mode heeft
         const withMode = data.map(p => ({ broker_mode: 'simulation', ...p }));
         setPortfolios(withMode);
         setActiveIndex(0);
@@ -111,7 +119,25 @@ function App() {
   }
 
   function handleAddPortfolio(name, brokerMode) {
+    if (brokerMode === 'paper' && !alpacaKeys) {
+      setOnboardingMode({ name, brokerMode });
+      setShowAlpacaSetup(true);
+      return;
+    }
     setOnboardingMode({ name, brokerMode: brokerMode || 'simulation' });
+    setPage('onboarding');
+  }
+
+  async function handleAlpacaSetupComplete(keys) {
+    if (user) {
+      try {
+        await saveAlpacaKeys(user.id, keys.apiKey, keys.secretKey);
+      } catch (err) {
+        console.error('Fout bij opslaan Alpaca keys:', err);
+      }
+    }
+    setAlpacaKeys(keys);
+    setShowAlpacaSetup(false);
     setPage('onboarding');
   }
 
@@ -161,6 +187,10 @@ function App() {
     return <Login onAuth={handleAuth} />;
   }
 
+  if (showAlpacaSetup) {
+    return <AlpacaSetup onComplete={handleAlpacaSetupComplete} onCancel={() => { setShowAlpacaSetup(false); setOnboardingMode(null); }} />;
+  }
+
   if (page === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} portfolioName={onboardingMode?.name} />;
   }
@@ -196,6 +226,7 @@ function App() {
       portfolios={portfolios}
       activeIndex={activeIndex}
       brokerMode={activePortfolio.broker_mode || 'simulation'}
+      alpacaKeys={alpacaKeys}
       onNavigate={handleNavigate}
       onUpdateSettings={handleUpdateSettings}
       onSwitchPortfolio={handleSwitchPortfolio}
