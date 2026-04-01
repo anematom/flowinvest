@@ -49,20 +49,46 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     } catch { return []; }
   });
 
-  // Reset alles bij portfolio switch
+  // Cache per portfolio — instant switchen
+  const cacheRef = useRef({});
+
+  // Sla huidige state op in cache voor dit portfolio
+  useEffect(() => {
+    return () => {
+      cacheRef.current[portfolioKey] = {
+        virtualPortfolio, liveTotals, marketAnalysis, aiMessage, trades, aiLog, lastCheck,
+      };
+    };
+  });
+
+  // Herstel of reset bij portfolio switch
   useEffect(() => {
     let saved = [];
     try {
       saved = JSON.parse(localStorage.getItem(historyKey)) || [];
     } catch {}
     setPortfolioHistoryState(saved);
-    setVirtualPortfolio(null);
-    setLiveTotals(null);
-    setMarketAnalysis(null);
-    setAiMessage(null);
-    setTrades([]);
-    setAiLog([]);
-    setLastCheck(null);
+
+    const cached = cacheRef.current[portfolioKey];
+    if (cached) {
+      // Herstel uit cache — instant
+      setVirtualPortfolio(cached.virtualPortfolio);
+      setLiveTotals(cached.liveTotals);
+      setMarketAnalysis(cached.marketAnalysis);
+      setAiMessage(cached.aiMessage);
+      setTrades(cached.trades);
+      setAiLog(cached.aiLog);
+      setLastCheck(cached.lastCheck);
+    } else {
+      // Geen cache — reset en laat laden
+      setVirtualPortfolio(null);
+      setLiveTotals(null);
+      setMarketAnalysis(null);
+      setAiMessage(null);
+      setTrades([]);
+      setAiLog([]);
+      setLastCheck(null);
+    }
     setLastPriceUpdate(null);
     prevValueRef.current = null;
   }, [historyKey]);
