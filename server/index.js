@@ -15,8 +15,8 @@ const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 // ============================================
 // ALPACA — Paper Trading
 // ============================================
-const ALPACA_KEY = process.env.ALPACA_KEY || 'PKRX4RHHPRKUVNS3MD2HHLARDE';
-const ALPACA_SECRET = process.env.ALPACA_SECRET || '83Jy6geLxV23oVrbRXdMjKEKwBVj3gGesh1dFfLfuoZH';
+const ALPACA_KEY = process.env.ALPACA_KEY || '';
+const ALPACA_SECRET = process.env.ALPACA_SECRET || '';
 const ALPACA_BASE = 'https://paper-api.alpaca.markets/v2';
 
 async function alpacaFetch(endpoint, options = {}) {
@@ -613,7 +613,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 // ============================================
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBDz-nDbUN982702bg7g3ZEPVSKxJsO21k';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const SYSTEM_PROMPT = `Je bent de FlowInvest AI-assistent, een vriendelijke en kalme beleggingsadviseur.
