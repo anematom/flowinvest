@@ -85,10 +85,17 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
       if (isUltraMode(settings.risk)) {
         // === ULTRA MODUS: Losse aandelen ===
         const stockQuotes = await fetchStocks();
+
+        // Beveilig: alleen doorgaan als we betrouwbare data hebben
+        const validQuotes = stockQuotes.filter(q => q.price != null && q.changePercent != null);
+        if (validQuotes.length < 3) {
+          console.warn('Te weinig betrouwbare koersdata, overslaan');
+          return;
+        }
         setMarketData(stockQuotes);
 
         // 1. Analyseer aandelen
-        const analysis = analyzeUltraMarket(stockQuotes);
+        const analysis = analyzeUltraMarket(validQuotes);
         setMarketAnalysis(analysis);
         setCurrentMode(analysis.mode);
 
@@ -150,10 +157,17 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
       } else {
         // === NORMAAL: ETF modus ===
         const quotes = await fetchPortfolio();
+
+        // Beveilig: alleen doorgaan als we betrouwbare data hebben
+        const validETFs = quotes.filter(q => q.price != null && q.changePercent != null);
+        if (validETFs.length < 2) {
+          console.warn('Te weinig betrouwbare koersdata, overslaan');
+          return;
+        }
         setMarketData(quotes);
 
         // 1. Analyseer de markt
-        const analysis = analyzeMarket(quotes);
+        const analysis = analyzeMarket(validETFs);
         setMarketAnalysis(analysis);
 
         // 2. Bepaal slimme allocatie
@@ -241,6 +255,10 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     if (!virtualPortfolio) return;
     try {
       const quotes = isUltraMode(settings.risk) ? await fetchStocks() : await fetchPortfolio();
+
+      // Beveilig: als geen betrouwbare data, behoud huidige waarden
+      const validCount = quotes.filter(q => q.price != null).length;
+      if (validCount < 2) return;
       setMarketData(quotes);
 
       // Update portfolio met nieuwe prijzen maar behoud huidige allocatie
