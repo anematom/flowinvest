@@ -50,6 +50,7 @@ export async function savePortfolio(userId, portfolio) {
         goal: portfolio.goal,
         horizon: portfolio.horizon,
         risk: portfolio.risk,
+        broker_mode: portfolio.broker_mode || 'simulation',
         updated_at: new Date().toISOString(),
       })
       .eq('id', portfolio.id);
@@ -65,6 +66,7 @@ export async function savePortfolio(userId, portfolio) {
         goal: portfolio.goal,
         horizon: portfolio.horizon,
         risk: portfolio.risk,
+        broker_mode: portfolio.broker_mode || 'simulation',
       })
       .select()
       .single();
