@@ -95,8 +95,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
         // 2. Bouw portfolio of gebruik opgeslagen holdings
         let savedHoldings = null;
         try { savedHoldings = JSON.parse(localStorage.getItem(holdingsKey)); } catch {}
+
+        // Check of inleg is gewijzigd — zo ja, herbouw portfolio
+        const savedTotal = savedHoldings ? savedHoldings.reduce((sum, h) => sum + h.invested, 0) : 0;
+        const amountChanged = savedHoldings && Math.abs(savedTotal - settings.amount) > 1;
+
         let portfolio;
-        if (savedHoldings && savedHoldings.length > 0) {
+        if (savedHoldings && savedHoldings.length > 0 && !amountChanged) {
           portfolio = savedHoldings.map(h => {
             const quote = stockQuotes.find(q => q.symbol === h.symbol);
             const currentPrice = quote?.price || h.buyPrice;
@@ -106,6 +111,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
             return { ...h, price: currentPrice, currentValue, gain, gainPercent, changePercent: quote?.changePercent || 0 };
           });
         } else {
+          // Eerste keer of inleg gewijzigd: (her)bouw portfolio
           portfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
           try {
             localStorage.setItem(holdingsKey, JSON.stringify(portfolio.map(h => ({
@@ -157,8 +163,12 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
         // 3. Bouw portfolio of gebruik opgeslagen holdings
         let savedETF = null;
         try { savedETF = JSON.parse(localStorage.getItem(holdingsKey)); } catch {}
+
+        const savedETFTotal = savedETF ? savedETF.reduce((sum, h) => sum + h.invested, 0) : 0;
+        const etfAmountChanged = savedETF && Math.abs(savedETFTotal - settings.amount) > 1;
+
         let portfolio;
-        if (savedETF && savedETF.length > 0) {
+        if (savedETF && savedETF.length > 0 && !etfAmountChanged) {
           portfolio = savedETF.map(h => {
             const quote = quotes.find(q => q.symbol === h.symbol);
             const currentPrice = quote?.price || h.buyPrice;
