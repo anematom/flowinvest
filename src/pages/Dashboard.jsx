@@ -82,6 +82,18 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         ]);
         setAlpacaAccount(account);
         setAlpacaPositions(positions);
+
+        // Sla snapshot op voor grafiek
+        if (account.equity) {
+          const now = new Date();
+          setPortfolioHistory(prev => {
+            const snapshot = {
+              date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              value: parseFloat(account.equity.toFixed(2)),
+            };
+            return [...prev, snapshot].slice(-200);
+          });
+        }
       } catch (err) {
         console.error('Alpaca laden mislukt:', err);
       }
@@ -609,14 +621,36 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         <span className="status-text">{summary.status}</span>
       </div>
 
-      {/* Portfolio Allocation — Alpaca posities in paper mode, anders simulatie */}
+      {/* Portfolio Allocation — Alpaca posities in paper mode */}
       {isPaper && alpacaPositions.length > 0 && (
         <div className="portfolio-section">
           <h3 className="section-title">Jouw posities</h3>
+
+          {/* Pie chart */}
+          <div className="allocation-chart">
+            <PieChart width={160} height={160}>
+              <Pie
+                data={alpacaPositions}
+                dataKey="marketValue"
+                nameKey="symbol"
+                cx="50%"
+                cy="50%"
+                outerRadius={70}
+                innerRadius={40}
+              >
+                {alpacaPositions.map((_, i) => (
+                  <Cell key={i} fill={ULTRA_COLORS[i % ULTRA_COLORS.length]} />
+                ))}
+              </Pie>
+            </PieChart>
+          </div>
+
+          {/* Holdings list */}
           <div className="holdings-list">
-            {alpacaPositions.map(pos => (
+            {alpacaPositions.map((pos, i) => (
               <div key={pos.symbol} className="holding-card">
                 <div className="holding-left">
+                  <div className="holding-color" style={{ background: ULTRA_COLORS[i % ULTRA_COLORS.length] }} />
                   <div>
                     <div className="holding-symbol">{pos.symbol}</div>
                     <div className="holding-name">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
@@ -744,13 +778,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
                 tick={{ fontSize: 11, fill: '#90A4AE' }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={v => `€${v}`}
-                width={55}
+                tickFormatter={v => `${cur}${v}`}
+                width={65}
                 domain={['dataMin', 'dataMax']}
               />
               <Tooltip
                 formatter={v => [
-                  `€${typeof v === 'number' ? v.toFixed(2) : v}`,
+                  `${cur}${typeof v === 'number' ? v.toFixed(2) : v}`,
                   'Waarde'
                 ]}
                 contentStyle={{
