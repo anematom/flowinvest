@@ -136,8 +136,10 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
 // Bereken totale portfolio waarde
 export function getPortfolioTotals(portfolio, startAmount) {
   const totalValue = portfolio.reduce((sum, p) => sum + p.currentValue, 0);
-  const totalGain = totalValue - startAmount;
-  const totalGainPercent = startAmount > 0 ? ((totalGain / startAmount) * 100) : 0;
+  const totalInvested = portfolio.reduce((sum, p) => sum + (p.invested || 0), 0);
+  // Gebruik werkelijk geïnvesteerd bedrag, niet de inleg
+  const totalGain = totalValue - totalInvested;
+  const totalGainPercent = totalInvested > 0 ? ((totalGain / totalInvested) * 100) : 0;
 
   return {
     totalValue,

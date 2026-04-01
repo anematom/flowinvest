@@ -633,7 +633,11 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       {/* Status message */}
       <div className={`status-card ${!summary.isPositive ? 'status-neutral' : ''}`}>
         <span className="status-icon">{summary.isPositive ? '✓' : 'ℹ'}</span>
-        <span className="status-text">{summary.status}</span>
+        <span className="status-text">
+          {!summary.loading && !summary.isPositive && liveTotals
+            ? `Je portfolio staat ${Math.abs(parseFloat(summary.gainLossPercent)).toFixed(1)}% onder je inleg. ${aiMessage?.message || 'De markt kan schommelen — dit is normaal.'}`
+            : summary.status}
+        </span>
       </div>
 
       {virtualPortfolio && (
