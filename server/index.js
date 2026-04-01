@@ -413,8 +413,97 @@ const DEFENSE_CONFIG = {
   ultra: { normal: 1.00, defense: 0.80, panic: 0.60, crisis: 0.40 },
 };
 
+// ============================================
+// BEVEILIGINGEN
+// ============================================
+
+// Noodstop — als actief, worden er geen trades geplaatst
+let emergencyStop = false;
+
+app.post('/api/alpaca/emergency-stop', (req, res) => {
+  emergencyStop = true;
+  res.json({ status: 'stopped', message: 'Noodstop geactiveerd — alle automatische trades gestopt' });
+});
+
+app.post('/api/alpaca/emergency-resume', (req, res) => {
+  emergencyStop = false;
+  orderCount = 0; // Reset order teller
+  res.json({ status: 'resumed', message: 'Automatische trades hervat' });
+});
+
+app.get('/api/alpaca/emergency-status', (req, res) => {
+  res.json({ stopped: emergencyStop });
+});
+
+// Rate limiting — max 10 orders per uur
+let orderCount = 0;
+let orderCountReset = Date.now();
+const MAX_ORDERS_PER_HOUR = 10;
+
+function checkRateLimit() {
+  const now = Date.now();
+  if (now - orderCountReset > 60 * 60 * 1000) {
+    orderCount = 0;
+    orderCountReset = now;
+  }
+  if (orderCount >= MAX_ORDERS_PER_HOUR) {
+    return false;
+  }
+  orderCount++;
+  return true;
+}
+
+// Audit log — alle trades worden vastgelegd
+const auditLog = [];
+
+function logTrade(trade) {
+  auditLog.unshift({
+    ...trade,
+    timestamp: new Date().toISOString(),
+  });
+  // Bewaar max 100 entries
+  if (auditLog.length > 100) auditLog.pop();
+}
+
+app.get('/api/alpaca/audit-log', (req, res) => {
+  res.json(auditLog);
+});
+
+// Veilige order plaatsing met rate limiting en audit log
+async function placeOrder(orderBody, reason) {
+  if (emergencyStop) {
+    return { skipped: true, reason: 'Noodstop actief' };
+  }
+  if (!checkRateLimit()) {
+    return { skipped: true, reason: 'Max orders per uur bereikt' };
+  }
+  const result = await alpacaFetch('/orders', {
+    method: 'POST',
+    body: JSON.stringify(orderBody),
+  });
+  logTrade({
+    symbol: orderBody.symbol,
+    side: orderBody.side,
+    qty: orderBody.qty || null,
+    notional: orderBody.notional || null,
+    reason,
+    orderId: result.id,
+    status: result.status,
+  });
+  return result;
+}
+
+// ============================================
+// AUTO-TRADE
+// ============================================
+
 app.post('/api/alpaca/auto-trade', async (req, res) => {
   try {
+    // Noodstop check
+    if (emergencyStop) {
+      return res.json({ action: 'stopped', reason: 'Noodstop is actief', trades: [] });
+    }
+
     const { risk = 'ultra', amount } = req.body;
 
     // 1. Haal account info en huidige posities op
@@ -474,30 +563,24 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       const symbol = pos.symbol;
 
       if (plPercent <= TRADE_THRESHOLDS.stopLoss) {
-        // Stop-loss: verkoop alles
         try {
-          await alpacaFetch('/orders', {
-            method: 'POST',
-            body: JSON.stringify({
-              symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day',
-            }),
-          });
-          trades.push({ symbol, action: 'STOP_LOSS', reason: `${plPercent.toFixed(1)}% verlies`, amount: pos.qty });
+          const result = await placeOrder(
+            { symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
+            `Stop-loss: ${plPercent.toFixed(1)}% verlies`
+          );
+          if (!result.skipped) trades.push({ symbol, action: 'STOP_LOSS', reason: `${plPercent.toFixed(1)}% verlies`, amount: pos.qty });
         } catch (e) { console.error('Stop-loss fout:', e.message); }
         continue;
       }
 
       if (plPercent >= TRADE_THRESHOLDS.takeProfit) {
-        // Take-profit: verkoop helft
         const sellQty = (parseFloat(pos.qty) / 2).toFixed(4);
         try {
-          await alpacaFetch('/orders', {
-            method: 'POST',
-            body: JSON.stringify({
-              symbol, qty: sellQty, side: 'sell', type: 'market', time_in_force: 'day',
-            }),
-          });
-          trades.push({ symbol, action: 'TAKE_PROFIT', reason: `+${plPercent.toFixed(1)}% winst`, amount: sellQty });
+          const result = await placeOrder(
+            { symbol, qty: sellQty, side: 'sell', type: 'market', time_in_force: 'day' },
+            `Take-profit: +${plPercent.toFixed(1)}% winst`
+          );
+          if (!result.skipped) trades.push({ symbol, action: 'TAKE_PROFIT', reason: `+${plPercent.toFixed(1)}% winst`, amount: sellQty });
         } catch (e) { console.error('Take-profit fout:', e.message); }
       }
     }
@@ -511,31 +594,22 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       for (let i = 0; i < top5.length; i++) {
         const stock = top5[i];
         const buyAmount = stockBudget * weights[i];
-
         if (buyAmount < 1) continue;
 
-        // Check of we dit aandeel al hebben
         const existing = positions.find(p => p.symbol === stock.symbol);
         const existingValue = existing ? parseFloat(existing.market_value) : 0;
         const targetValue = targetStockValue * weights[i];
 
-        // Alleen kopen als we onder target zitten
         if (existingValue < targetValue * 0.9) {
           const toBuy = Math.min(buyAmount, targetValue - existingValue);
           if (toBuy < 1) continue;
 
           try {
-            await alpacaFetch('/orders', {
-              method: 'POST',
-              body: JSON.stringify({
-                symbol: stock.symbol,
-                notional: toBuy.toFixed(2),
-                side: 'buy',
-                type: 'market',
-                time_in_force: 'day',
-              }),
-            });
-            trades.push({ symbol: stock.symbol, action: 'KOOP', reason: `Top ${i + 1} momentum`, amount: `$${toBuy.toFixed(2)}` });
+            const result = await placeOrder(
+              { symbol: stock.symbol, notional: toBuy.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
+              `Top ${i + 1} momentum`
+            );
+            if (!result.skipped) trades.push({ symbol: stock.symbol, action: 'KOOP', reason: `Top ${i + 1} momentum`, amount: `$${toBuy.toFixed(2)}` });
           } catch (e) { console.error('Koop fout:', e.message); }
         }
       }
@@ -545,35 +619,27 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
         const bondBudget = Math.min(cash, targetBondValue) * 0.95;
         if (bondBudget > 1) {
           try {
-            await alpacaFetch('/orders', {
-              method: 'POST',
-              body: JSON.stringify({
-                symbol: 'BND',
-                notional: bondBudget.toFixed(2),
-                side: 'buy',
-                type: 'market',
-                time_in_force: 'day',
-              }),
-            });
-            trades.push({ symbol: 'BND', action: 'BESCHERMING', reason: `${mode} modus — ${Math.round(bondFraction * 100)}% obligaties`, amount: `$${bondBudget.toFixed(2)}` });
+            const result = await placeOrder(
+              { symbol: 'BND', notional: bondBudget.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
+              `${mode} modus — ${Math.round(bondFraction * 100)}% obligaties`
+            );
+            if (!result.skipped) trades.push({ symbol: 'BND', action: 'BESCHERMING', reason: `${mode} modus — ${Math.round(bondFraction * 100)}% obligaties`, amount: `$${bondBudget.toFixed(2)}` });
           } catch (e) { console.error('BND koop fout:', e.message); }
         }
       }
     }
 
-    // 8. Verkoop aandelen die niet meer in top 5 zitten (bij recovery/normal)
+    // 8. Verkoop aandelen die niet meer in top 5 zitten
     if (mode === 'normal' || mode === 'recovery') {
       const top5Symbols = top5.map(s => s.symbol);
       for (const pos of positions) {
         if (pos.symbol !== 'BND' && !top5Symbols.includes(pos.symbol)) {
           try {
-            await alpacaFetch('/orders', {
-              method: 'POST',
-              body: JSON.stringify({
-                symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day',
-              }),
-            });
-            trades.push({ symbol: pos.symbol, action: 'ROTATIE', reason: 'Niet meer in top 5', amount: pos.qty });
+            const result = await placeOrder(
+              { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
+              'Niet meer in top 5'
+            );
+            if (!result.skipped) trades.push({ symbol: pos.symbol, action: 'ROTATIE', reason: 'Niet meer in top 5', amount: pos.qty });
           } catch (e) { console.error('Rotatie fout:', e.message); }
         }
       }
@@ -582,13 +648,11 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       const bndPosition = positions.find(p => p.symbol === 'BND');
       if (bndPosition && bondFraction === 0) {
         try {
-          await alpacaFetch('/orders', {
-            method: 'POST',
-            body: JSON.stringify({
-              symbol: 'BND', qty: bndPosition.qty, side: 'sell', type: 'market', time_in_force: 'day',
-            }),
-          });
-          trades.push({ symbol: 'BND', action: 'HERSTEL', reason: 'Terug naar 100% aandelen', amount: bndPosition.qty });
+          const result = await placeOrder(
+            { symbol: 'BND', qty: bndPosition.qty, side: 'sell', type: 'market', time_in_force: 'day' },
+            'Terug naar 100% aandelen'
+          );
+          if (!result.skipped) trades.push({ symbol: 'BND', action: 'HERSTEL', reason: 'Terug naar 100% aandelen', amount: bndPosition.qty });
         } catch (e) { console.error('BND verkoop fout:', e.message); }
       }
     }

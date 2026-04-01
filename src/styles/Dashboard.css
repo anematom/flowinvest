@@ -200,6 +200,52 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
+/* Noodstop */
+.emergency-section {
+  margin: 16px;
+  text-align: center;
+}
+
+.emergency-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.emergency-btn.stop {
+  background: #FFEBEE;
+  color: #C62828;
+  border: 2px solid #F44336;
+}
+
+.emergency-btn.stop:hover {
+  background: #F44336;
+  color: white;
+}
+
+.emergency-btn.resume {
+  background: #E8F5E9;
+  color: #2E7D32;
+  border: 2px solid #4CAF50;
+}
+
+.emergency-btn.resume:hover {
+  background: #4CAF50;
+  color: white;
+}
+
+.emergency-info {
+  font-size: 13px;
+  color: #C62828;
+  margin-top: 8px;
+}
+
 .loading-text {
   color: #B0BEC5;
   font-size: 24px;

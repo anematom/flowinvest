@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade } from '../data/marketApi';
+import { fetchPortfolio, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
@@ -25,6 +25,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [alpacaAccount, setAlpacaAccount] = useState(null);
   const [alpacaPositions, setAlpacaPositions] = useState([]);
   const [alpacaTradeResult, setAlpacaTradeResult] = useState(null);
+  const [emergencyStopped, setEmergencyStopped] = useState(false);
   const [liveMode, setLiveMode] = useState(true);
   const [virtualPortfolio, setVirtualPortfolio] = useState(null);
   const [liveTotals, setLiveTotals] = useState(null);
@@ -71,12 +72,14 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     if (brokerMode !== 'paper') return;
     async function loadAlpaca() {
       try {
-        const [account, positions] = await Promise.all([
+        const [account, positions, emergencyStatus] = await Promise.all([
           fetchAlpacaAccount(),
           fetchAlpacaPositions(),
+          fetchEmergencyStatus(),
         ]);
         setAlpacaAccount(account);
         setAlpacaPositions(positions);
+        setEmergencyStopped(emergencyStatus.stopped);
 
         // Sla snapshot op voor grafiek
         if (account.equity) {
@@ -811,6 +814,30 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       )}
 
       {/* Bottom nav */}
+      {/* Noodstop — alleen bij paper/live trading */}
+      {brokerMode !== 'simulation' && (
+        <div className="emergency-section">
+          {emergencyStopped ? (
+            <button className="emergency-btn resume" onClick={async () => {
+              await alpacaEmergencyResume();
+              setEmergencyStopped(false);
+            }}>
+              Hervat automatisch handelen
+            </button>
+          ) : (
+            <button className="emergency-btn stop" onClick={async () => {
+              await alpacaEmergencyStop();
+              setEmergencyStopped(true);
+            }}>
+              Noodstop — stop alle trades
+            </button>
+          )}
+          {emergencyStopped && (
+            <p className="emergency-info">Automatisch handelen is gestopt. Je posities blijven staan.</p>
+          )}
+        </div>
+      )}
+
       <div className="bottom-nav">
         <button className="nav-btn active" onClick={() => onNavigate('dashboard')}>
           <span className="nav-icon">📊</span>
