@@ -63,7 +63,7 @@
   color: #1565C0;
 }
 
-.portfolio-tab.broker {
+.portfolio-tab.broker.active {
   border-color: #9C27B0;
   background: #F3E5F5;
   color: #7B1FA2;
