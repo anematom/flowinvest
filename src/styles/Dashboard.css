@@ -908,6 +908,65 @@
   margin-top: 16px;
 }
 
+.alpaca-trade-result {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #F0F0F0;
+}
+
+.alpaca-trade-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #78909C;
+  margin-bottom: 10px;
+}
+
+.alpaca-trades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alpaca-trade-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #F7F9F8;
+  font-size: 13px;
+}
+
+.alpaca-trade-item.buy {
+  background: #E3F2FD;
+}
+
+.alpaca-trade-item.sell {
+  background: #FFEBEE;
+}
+
+.alpaca-trade-action {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.08);
+  white-space: nowrap;
+}
+
+.alpaca-trade-symbol {
+  font-weight: 600;
+  color: #263238;
+}
+
+.alpaca-trade-reason {
+  font-size: 12px;
+  color: #78909C;
+  flex: 1;
+  text-align: right;
+}
+
 /* Trading signalen */
 .signals-card {
   margin: 0 16px 16px;

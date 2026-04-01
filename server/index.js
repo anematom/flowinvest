@@ -391,6 +391,218 @@ app.get('/api/alpaca/orders', async (req, res) => {
 });
 
 // ============================================
+// AUTO-TRADE — AI-gestuurde trading via Alpaca
+// ============================================
+
+// Drempels (zelfde als frontend smartAI)
+const TRADE_THRESHOLDS = {
+  defenseMode: -2.0,
+  panicMode: -5.0,
+  crisisMode: -10.0,
+  recoveryMode: 1.5,
+  stopLoss: -10.0,
+  takeProfit: 15.0,
+  buyDip: -3.0,
+};
+
+// Defensieve verdeling per risicoprofiel
+const DEFENSE_CONFIG = {
+  low: { normal: 0.50, defense: 0.30, panic: 0.15, crisis: 0.10 },     // aandelen %
+  medium: { normal: 0.85, defense: 0.60, panic: 0.40, crisis: 0.25 },
+  high: { normal: 1.00, defense: 0.65, panic: 0.50, crisis: 0.35 },
+  ultra: { normal: 1.00, defense: 0.80, panic: 0.60, crisis: 0.40 },
+};
+
+app.post('/api/alpaca/auto-trade', async (req, res) => {
+  try {
+    const { risk = 'ultra', amount } = req.body;
+
+    // 1. Haal account info en huidige posities op
+    const [account, positions, stockQuotes] = await Promise.all([
+      alpacaFetch('/account'),
+      alpacaFetch('/positions'),
+      Promise.all(
+        MOMENTUM_STOCKS.map(async (stock) => {
+          try {
+            const data = await finnhubFetch(`/quote?symbol=${stock.symbol}`);
+            return { ...stock, price: data.c, changePercent: data.dp, previousClose: data.pc };
+          } catch { return null; }
+        })
+      ),
+    ]);
+
+    const validQuotes = stockQuotes.filter(q => q && q.price && q.changePercent != null);
+    if (validQuotes.length < 3) {
+      return res.json({ action: 'skip', reason: 'Te weinig betrouwbare koersdata' });
+    }
+
+    // 2. Analyseer markt
+    const changes = validQuotes.map(q => q.changePercent);
+    const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
+
+    let mode = 'normal';
+    if (avgChange <= TRADE_THRESHOLDS.crisisMode) mode = 'crisis';
+    else if (avgChange <= TRADE_THRESHOLDS.panicMode) mode = 'panic';
+    else if (avgChange <= TRADE_THRESHOLDS.defenseMode) mode = 'defense';
+    else if (avgChange >= TRADE_THRESHOLDS.recoveryMode) mode = 'recovery';
+
+    // 3. Bepaal hoeveel in aandelen vs obligaties
+    const config = DEFENSE_CONFIG[risk] || DEFENSE_CONFIG.ultra;
+    const stockFraction = config[mode] || config.normal;
+    const bondFraction = 1 - stockFraction;
+
+    const equity = parseFloat(account.equity);
+    const cash = parseFloat(account.cash);
+    const targetStockValue = equity * stockFraction;
+    const targetBondValue = equity * bondFraction;
+
+    // 4. Top 5 aandelen op basis van momentum
+    const top5 = validQuotes
+      .sort((a, b) => b.changePercent - a.changePercent)
+      .slice(0, 5);
+
+    const trades = [];
+    const weights = [0.30, 0.25, 0.20, 0.15, 0.10];
+
+    // 5. Check stop-loss en take-profit op bestaande posities
+    for (const pos of positions) {
+      const plPercent = parseFloat(pos.unrealized_plpc) * 100;
+      const symbol = pos.symbol;
+
+      if (plPercent <= TRADE_THRESHOLDS.stopLoss) {
+        // Stop-loss: verkoop alles
+        try {
+          await alpacaFetch('/orders', {
+            method: 'POST',
+            body: JSON.stringify({
+              symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day',
+            }),
+          });
+          trades.push({ symbol, action: 'STOP_LOSS', reason: `${plPercent.toFixed(1)}% verlies`, amount: pos.qty });
+        } catch (e) { console.error('Stop-loss fout:', e.message); }
+        continue;
+      }
+
+      if (plPercent >= TRADE_THRESHOLDS.takeProfit) {
+        // Take-profit: verkoop helft
+        const sellQty = (parseFloat(pos.qty) / 2).toFixed(4);
+        try {
+          await alpacaFetch('/orders', {
+            method: 'POST',
+            body: JSON.stringify({
+              symbol, qty: sellQty, side: 'sell', type: 'market', time_in_force: 'day',
+            }),
+          });
+          trades.push({ symbol, action: 'TAKE_PROFIT', reason: `+${plPercent.toFixed(1)}% winst`, amount: sellQty });
+        } catch (e) { console.error('Take-profit fout:', e.message); }
+      }
+    }
+
+    // 6. Koop top 5 aandelen als er cash is
+    if (cash > 10) {
+      const stockBudget = Math.min(cash, targetStockValue) * 0.95; // 5% buffer
+
+      for (let i = 0; i < top5.length; i++) {
+        const stock = top5[i];
+        const buyAmount = stockBudget * weights[i];
+
+        if (buyAmount < 1) continue;
+
+        // Check of we dit aandeel al hebben
+        const existing = positions.find(p => p.symbol === stock.symbol);
+        const existingValue = existing ? parseFloat(existing.market_value) : 0;
+        const targetValue = targetStockValue * weights[i];
+
+        // Alleen kopen als we onder target zitten
+        if (existingValue < targetValue * 0.9) {
+          const toBuy = Math.min(buyAmount, targetValue - existingValue);
+          if (toBuy < 1) continue;
+
+          try {
+            await alpacaFetch('/orders', {
+              method: 'POST',
+              body: JSON.stringify({
+                symbol: stock.symbol,
+                notional: toBuy.toFixed(2),
+                side: 'buy',
+                type: 'market',
+                time_in_force: 'day',
+              }),
+            });
+            trades.push({ symbol: stock.symbol, action: 'KOOP', reason: `Top ${i + 1} momentum`, amount: `$${toBuy.toFixed(2)}` });
+          } catch (e) { console.error('Koop fout:', e.message); }
+        }
+      }
+
+      // 7. Koop obligaties als defensief
+      if (bondFraction > 0 && mode !== 'normal' && mode !== 'recovery') {
+        const bondBudget = Math.min(cash, targetBondValue) * 0.95;
+        if (bondBudget > 1) {
+          try {
+            await alpacaFetch('/orders', {
+              method: 'POST',
+              body: JSON.stringify({
+                symbol: 'BND',
+                notional: bondBudget.toFixed(2),
+                side: 'buy',
+                type: 'market',
+                time_in_force: 'day',
+              }),
+            });
+            trades.push({ symbol: 'BND', action: 'BESCHERMING', reason: `${mode} modus — ${Math.round(bondFraction * 100)}% obligaties`, amount: `$${bondBudget.toFixed(2)}` });
+          } catch (e) { console.error('BND koop fout:', e.message); }
+        }
+      }
+    }
+
+    // 8. Verkoop aandelen die niet meer in top 5 zitten (bij recovery/normal)
+    if (mode === 'normal' || mode === 'recovery') {
+      const top5Symbols = top5.map(s => s.symbol);
+      for (const pos of positions) {
+        if (pos.symbol !== 'BND' && !top5Symbols.includes(pos.symbol)) {
+          try {
+            await alpacaFetch('/orders', {
+              method: 'POST',
+              body: JSON.stringify({
+                symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day',
+              }),
+            });
+            trades.push({ symbol: pos.symbol, action: 'ROTATIE', reason: 'Niet meer in top 5', amount: pos.qty });
+          } catch (e) { console.error('Rotatie fout:', e.message); }
+        }
+      }
+
+      // Verkoop BND bij herstel
+      const bndPosition = positions.find(p => p.symbol === 'BND');
+      if (bndPosition && bondFraction === 0) {
+        try {
+          await alpacaFetch('/orders', {
+            method: 'POST',
+            body: JSON.stringify({
+              symbol: 'BND', qty: bndPosition.qty, side: 'sell', type: 'market', time_in_force: 'day',
+            }),
+          });
+          trades.push({ symbol: 'BND', action: 'HERSTEL', reason: 'Terug naar 100% aandelen', amount: bndPosition.qty });
+        } catch (e) { console.error('BND verkoop fout:', e.message); }
+      }
+    }
+
+    res.json({
+      mode,
+      avgChange: avgChange.toFixed(2),
+      stockFraction: Math.round(stockFraction * 100),
+      bondFraction: Math.round(bondFraction * 100),
+      top5: top5.map(s => s.symbol),
+      trades,
+      equity,
+      cash,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // AI ASSISTENT — Google Gemini
 // ============================================
 import { GoogleGenerativeAI } from '@google/generative-ai';

@@ -69,6 +69,16 @@ export async function alpacaSell(symbol, qty) {
   return res.json();
 }
 
+export async function alpacaAutoTrade(risk) {
+  const res = await fetch(`${API_BASE}/alpaca/auto-trade`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ risk }),
+  });
+  if (!res.ok) throw new Error('Auto-trade mislukt');
+  return res.json();
+}
+
 export async function fetchAlpacaOrders() {
   const res = await fetch(`${API_BASE}/alpaca/orders`);
   if (!res.ok) throw new Error('Failed to fetch orders');

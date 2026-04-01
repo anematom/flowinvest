@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchHistory, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions } from '../data/marketApi';
+import { fetchPortfolio, fetchHistory, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade } from '../data/marketApi';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
@@ -24,6 +24,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [marketData, setMarketData] = useState(null);
   const [alpacaAccount, setAlpacaAccount] = useState(null);
   const [alpacaPositions, setAlpacaPositions] = useState([]);
+  const [alpacaTradeResult, setAlpacaTradeResult] = useState(null);
+  const [alpacaTrading, setAlpacaTrading] = useState(false);
   const [selectedETF, setSelectedETF] = useState('SPY');
   const [etfHistory, setEtfHistory] = useState(null);
   const [liveMode, setLiveMode] = useState(true);
@@ -69,7 +71,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     prevValueRef.current = null;
   }, [historyKey, holdingsKey]);
 
-  // Alpaca data laden in paper mode
+  // Alpaca data laden en auto-traden in paper mode
   useEffect(() => {
     if (brokerMode !== 'paper') return;
     async function loadAlpaca() {
@@ -85,9 +87,26 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       }
     }
     loadAlpaca();
-    const interval = setInterval(loadAlpaca, 30000); // elke 30 sec
-    return () => clearInterval(interval);
-  }, [brokerMode]);
+    const dataInterval = setInterval(loadAlpaca, 30000);
+
+    // Auto-trade elke 10 minuten
+    async function runAutoTrade() {
+      try {
+        const result = await alpacaAutoTrade(settings.risk);
+        setAlpacaTradeResult(result);
+        loadAlpaca(); // Herlaad data na trades
+      } catch (err) {
+        console.error('Auto-trade mislukt:', err);
+      }
+    }
+    runAutoTrade();
+    const tradeInterval = setInterval(runAutoTrade, 10 * 60 * 1000);
+
+    return () => {
+      clearInterval(dataInterval);
+      clearInterval(tradeInterval);
+    };
+  }, [brokerMode, settings.risk]);
 
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
@@ -599,7 +618,31 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           )}
 
           {alpacaPositions.length === 0 && (
-            <p className="alpaca-empty">Je hebt nog geen posities. De AI zal automatisch beginnen met handelen.</p>
+            <p className="alpaca-empty">Je hebt nog geen posities. De AI begint automatisch met handelen als de markt open is.</p>
+          )}
+
+          {/* Trade resultaat */}
+          {alpacaTradeResult && (
+            <div className="alpaca-trade-result">
+              <div className="alpaca-trade-header">
+                <span>AI Modus: <strong>{alpacaTradeResult.mode}</strong></span>
+                <span>{alpacaTradeResult.stockFraction}% aandelen / {alpacaTradeResult.bondFraction}% obligaties</span>
+              </div>
+              {alpacaTradeResult.trades && alpacaTradeResult.trades.length > 0 && (
+                <div className="alpaca-trades-list">
+                  {alpacaTradeResult.trades.map((t, i) => (
+                    <div key={i} className={`alpaca-trade-item ${t.action === 'KOOP' || t.action === 'HERSTEL' ? 'buy' : t.action === 'STOP_LOSS' ? 'sell' : ''}`}>
+                      <span className="alpaca-trade-action">{t.action}</span>
+                      <span className="alpaca-trade-symbol">{t.symbol}</span>
+                      <span className="alpaca-trade-reason">{t.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {alpacaTradeResult.trades && alpacaTradeResult.trades.length === 0 && (
+                <p className="alpaca-empty">Geen trades nodig — portfolio is in balans</p>
+              )}
+            </div>
           )}
         </div>
       )}
