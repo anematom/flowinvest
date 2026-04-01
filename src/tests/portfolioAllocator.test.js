@@ -104,25 +104,27 @@ describe('buildUltraPortfolio', () => {
 });
 
 describe('getPortfolioTotals', () => {
-  it('berekent totale waarde correct', () => {
+  it('berekent totale waarde correct — winst per holding', () => {
     const portfolio = [
-      { currentValue: 300, invested: 280 },
-      { currentValue: 200, invested: 200 },
-      { currentValue: 500, invested: 520 },
+      { currentValue: 300, invested: 280, gain: 20 },
+      { currentValue: 200, invested: 200, gain: 0 },
+      { currentValue: 500, invested: 520, gain: -20 },
     ];
     const totals = getPortfolioTotals(portfolio, 1000);
-    expect(totals.totalValue).toBe(1000);
+    // totalGain = 20 + 0 + (-20) = 0
+    expect(totals.totalValue).toBe(1000); // inleg + 0
     expect(totals.totalGain).toBe(0);
     expect(totals.isPositive).toBe(true);
   });
 
   it('detecteert winst correct', () => {
     const portfolio = [
-      { currentValue: 550, invested: 500 },
-      { currentValue: 550, invested: 500 },
+      { currentValue: 550, invested: 500, gain: 50 },
+      { currentValue: 550, invested: 500, gain: 50 },
     ];
     const totals = getPortfolioTotals(portfolio, 1000);
-    expect(totals.totalValue).toBe(1100);
+    // totalGain = 50 + 50 = 100
+    expect(totals.totalValue).toBe(1100); // inleg + 100
     expect(totals.totalGain).toBe(100);
     expect(totals.totalGainPercent).toBeCloseTo(10, 0);
     expect(totals.isPositive).toBe(true);
@@ -130,11 +132,12 @@ describe('getPortfolioTotals', () => {
 
   it('detecteert verlies correct', () => {
     const portfolio = [
-      { currentValue: 400, invested: 500 },
-      { currentValue: 400, invested: 500 },
+      { currentValue: 400, invested: 500, gain: -100 },
+      { currentValue: 400, invested: 500, gain: -100 },
     ];
     const totals = getPortfolioTotals(portfolio, 1000);
-    expect(totals.totalValue).toBe(800);
+    // totalGain = -100 + (-100) = -200
+    expect(totals.totalValue).toBe(800); // inleg + (-200)
     expect(totals.totalGain).toBe(-200);
     expect(totals.isPositive).toBe(false);
   });
