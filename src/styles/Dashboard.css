@@ -63,6 +63,24 @@
   color: #2E7D32;
 }
 
+.portfolio-tab.paper {
+  border-color: #FF9800;
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.tab-mode-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.tab-mode-dot.paper {
+  background: #FF9800;
+}
+
 .portfolio-tab.add-tab {
   border-style: dashed;
   color: #4CAF50;
