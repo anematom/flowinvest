@@ -65,9 +65,9 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   const stockAmount = amount * stockFraction;
   const bndAmount = amount * bndFraction;
 
-  // Top 5 aandelen op basis van dagelijks momentum
+  // Top 5 aandelen op basis van dagelijks momentum (exclusief BND)
   const top5 = stockQuotes
-    .filter(q => q.price && q.changePercent != null)
+    .filter(q => q.price && q.changePercent != null && q.symbol !== 'BND')
     .sort((a, b) => b.changePercent - a.changePercent)
     .slice(0, 5);
 
