@@ -67,7 +67,8 @@ function getRecommendedRisk(goal, horizon) {
 }
 
 export default function Onboarding({ onComplete, portfolioName }) {
-  const [step, setStep] = useState(0);
+  const hasName = !!portfolioName;
+  const [step, setStep] = useState(hasName ? 2 : 0); // Skip welkom + naam als naam al gegeven is
   const [name, setName] = useState(portfolioName || '');
   const [settings, setSettings] = useState({
     amount: 100,
