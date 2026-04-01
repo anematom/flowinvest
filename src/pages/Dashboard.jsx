@@ -447,31 +447,10 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     recovery: '#2196F3',
   };
 
-  // Summary — in paper mode gebruik Alpaca data
+  // Summary — paper trading gebruikt dezelfde berekening als simulatie
   const isPaper = brokerMode === 'paper';
   let summary;
-  if (isPaper) {
-    // Bereken paper trading vermogen op basis van inleg
-    const totalPositionValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
-    // Begrens tot het inlegbedrag — je belegt niet meer dan je inleg
-    const cappedValue = Math.min(totalPositionValue, settings.amount * 1.5); // max 50% winst buffer
-    const totalGain = alpacaPositions.length > 0
-      ? alpacaPositions.reduce((sum, p) => sum + p.unrealizedPL, 0)
-      : 0;
-    // Vermogen = inleg + winst/verlies, maar nooit meer dan werkelijke posities
-    const currentValue = alpacaPositions.length > 0 ? settings.amount + totalGain : settings.amount;
-    const gainPercent = settings.amount > 0 ? ((totalGain / settings.amount) * 100) : 0;
-    summary = {
-      currentValue: currentValue,
-      gainLoss: totalGain,
-      gainLossPercent: gainPercent.toFixed(2),
-      isPositive: totalGain >= 0,
-      status: aiMessage?.message || (alpacaPositions.length > 0
-        ? (alpacaTradeResult ? `AI Modus: ${alpacaTradeResult.mode}` : 'Laden...')
-        : 'Wachten op marktopening...'),
-      currency: '$',
-    };
-  } else if (liveTotals) {
+  if (liveTotals) {
     summary = {
       currentValue: liveTotals.totalValue,
       gainLoss: liveTotals.totalGain,
@@ -495,7 +474,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   // Chart data
   const chartData = portfolioHistory.length > 1
     ? portfolioHistory
-    : [{ date: 'Nu', value: settings.amount }];
+    : [{ date: 'Start', value: settings.amount }, { date: 'Nu', value: settings.amount }];
 
   return (
     <div className="dashboard">
@@ -626,73 +605,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         <span className="status-text">{summary.status}</span>
       </div>
 
-      {/* Portfolio Allocation — Alpaca posities in paper mode */}
-      {isPaper && alpacaPositions.length > 0 && (() => {
-        const totalValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
-        return (
-          <div className="portfolio-section">
-            <h3 className="section-title">
-              {`Top ${alpacaPositions.length} Aandelen — $${totalValue.toFixed(0)} belegd`}
-              {alpacaTradeResult && (
-                <span className="mode-badge" style={{ background: '#2196F3' }}>
-                  {alpacaTradeResult.mode.toUpperCase()}
-                </span>
-              )}
-            </h3>
-
-            <div className="ultra-badge-bar">
-              <span className="ultra-badge">MAXIMAAL</span>
-              <span className="ultra-desc">AI selecteert de sterkste aandelen</span>
-            </div>
-
-            {/* Pie chart */}
-            <div className="allocation-chart">
-              <PieChart width={160} height={160}>
-                <Pie
-                  data={alpacaPositions}
-                  dataKey="marketValue"
-                  nameKey="symbol"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={70}
-                  innerRadius={40}
-                >
-                  {alpacaPositions.map((_, i) => (
-                    <Cell key={i} fill={ULTRA_COLORS[i % ULTRA_COLORS.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </div>
-
-            {/* Holdings list */}
-            <div className="holdings-list">
-              {alpacaPositions.map((pos, i) => (
-                <div key={pos.symbol} className="holding-card ultra">
-                  <div className="holding-left">
-                    <div className="holding-rank">#{i + 1}</div>
-                    <div>
-                      <div className="holding-symbol">{pos.symbol}</div>
-                      <div className="holding-name">{pos.symbol}</div>
-                      <div className="holding-desc">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
-                    </div>
-                  </div>
-                  <div className="holding-right">
-                    <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
-                    <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
-                      {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
-                    </div>
-                    <div className="holding-weight">
-                      {totalValue > 0 ? ((pos.marketValue / totalValue) * 100).toFixed(0) : 0}% van inleg
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {!isPaper && virtualPortfolio && (
+      {virtualPortfolio && (
         <div className="portfolio-section">
           <h3 className="section-title">
             {isUltraMode(settings.risk)
