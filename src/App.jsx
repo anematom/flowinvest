@@ -12,21 +12,10 @@ function App() {
   const [portfolios, setPortfolios] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [page, setPage] = useState('loading');
-  const [onboardingName, setOnboardingName] = useState(null);
-  const [brokerMode, setBrokerMode] = useState(() => {
-    try { return localStorage.getItem('flowinvest_broker_mode') || 'simulation'; }
-    catch { return 'simulation'; }
-  });
-
-  function handleSetBrokerMode(mode) {
-    if (mode === 'live') return; // Live nog niet beschikbaar
-    setBrokerMode(mode);
-    localStorage.setItem('flowinvest_broker_mode', mode);
-  }
+  const [onboardingMode, setOnboardingMode] = useState(null); // { name, brokerMode }
 
   const activePortfolio = portfolios[activeIndex] || null;
 
-  // Check of gebruiker al ingelogd is
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -54,15 +43,18 @@ function App() {
     try {
       const data = await loadPortfolios(userId);
       if (data.length > 0) {
-        setPortfolios(data);
+        // Zorg dat elk portfolio een broker_mode heeft
+        const withMode = data.map(p => ({ broker_mode: 'simulation', ...p }));
+        setPortfolios(withMode);
         setActiveIndex(0);
         setPage('dashboard');
       } else {
-        setOnboardingName('Mijn portfolio');
+        // Eerste keer: altijd simulatie
+        setOnboardingMode({ name: 'Mijn portfolio', brokerMode: 'simulation' });
         setPage('onboarding');
       }
     } catch {
-      setOnboardingName('Mijn portfolio');
+      setOnboardingMode({ name: 'Mijn portfolio', brokerMode: 'simulation' });
       setPage('onboarding');
     }
   }
@@ -73,8 +65,9 @@ function App() {
   }
 
   async function handleOnboardingComplete(userSettings) {
-    const name = userSettings.name || onboardingName || 'Mijn portfolio';
-    const newPortfolio = { name, ...userSettings };
+    const brokerMode = onboardingMode?.brokerMode || 'simulation';
+    const name = userSettings.name || onboardingMode?.name || 'Mijn portfolio';
+    const newPortfolio = { name, broker_mode: brokerMode, ...userSettings };
 
     if (user) {
       try {
@@ -85,7 +78,6 @@ function App() {
         }
       } catch (err) {
         console.error('Fout bij opslaan portfolio:', err);
-        alert('Let op: portfolio kon niet worden opgeslagen in de database. Probeer opnieuw in te loggen.');
       }
     }
 
@@ -95,7 +87,7 @@ function App() {
       return updated;
     });
     setPage('dashboard');
-    setOnboardingName(null);
+    setOnboardingMode(null);
   }
 
   async function handleUpdateSettings(newSettings) {
@@ -107,13 +99,14 @@ function App() {
     }
   }
 
-  function handleAddPortfolio(name) {
-    setOnboardingName(name);
+  function handleAddPortfolio(name, brokerMode) {
+    setOnboardingMode({ name, brokerMode: brokerMode || 'simulation' });
     setPage('onboarding');
   }
 
   function handleSwitchPortfolio(index) {
     setActiveIndex(index);
+    if (page !== 'dashboard') setPage('dashboard');
   }
 
   async function handleDeletePortfolio(index) {
@@ -154,7 +147,7 @@ function App() {
   }
 
   if (page === 'onboarding') {
-    return <Onboarding onComplete={handleOnboardingComplete} portfolioName={onboardingName} />;
+    return <Onboarding onComplete={handleOnboardingComplete} portfolioName={onboardingMode?.name} />;
   }
 
   if (!activePortfolio) {
@@ -170,12 +163,13 @@ function App() {
       <Profile
         user={user}
         portfolios={portfolios}
-        brokerMode={brokerMode}
+        activeIndex={activeIndex}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         onUpdatePortfolios={setPortfolios}
         onDeletePortfolio={handleDeletePortfolio}
-        onSetBrokerMode={handleSetBrokerMode}
+        onAddPortfolio={handleAddPortfolio}
+        onSwitchPortfolio={handleSwitchPortfolio}
       />
     );
   }
@@ -186,12 +180,10 @@ function App() {
       user={user}
       portfolios={portfolios}
       activeIndex={activeIndex}
-      brokerMode={brokerMode}
+      brokerMode={activePortfolio.broker_mode || 'simulation'}
       onNavigate={handleNavigate}
       onUpdateSettings={handleUpdateSettings}
       onSwitchPortfolio={handleSwitchPortfolio}
-      onAddPortfolio={handleAddPortfolio}
-      onDeletePortfolio={handleDeletePortfolio}
     />
   );
 }

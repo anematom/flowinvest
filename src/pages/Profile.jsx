@@ -2,9 +2,24 @@ import { useState } from 'react';
 import { savePortfolio } from '../data/supabase';
 import '../styles/Profile.css';
 
-export default function Profile({ user, portfolios, brokerMode, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onSetBrokerMode }) {
+const modeLabels = {
+  simulation: 'Simulatie',
+  paper: 'Paper Trading',
+  live: 'Live Trading',
+};
+
+const modeColors = {
+  simulation: '#4CAF50',
+  paper: '#FF9800',
+  live: '#F44336',
+};
+
+export default function Profile({ user, portfolios, activeIndex, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [showNewPortfolio, setShowNewPortfolio] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newMode, setNewMode] = useState('simulation');
 
   function startEdit(portfolio, index) {
     setEditingId(index);
@@ -28,17 +43,13 @@ export default function Profile({ user, portfolios, brokerMode, onNavigate, onLo
     setEditingId(null);
   }
 
-  const modeLabels = {
-    simulation: 'Simulatie',
-    paper: 'Paper Trading',
-    live: 'Live Trading',
-  };
-
-  const modeDescriptions = {
-    simulation: 'Oefen met nepgeld en echte koersen',
-    paper: 'Oefen met $100.000 virtueel geld via Alpaca',
-    live: 'Beleg met echt geld via Alpaca',
-  };
+  function handleCreatePortfolio() {
+    if (!newName.trim()) return;
+    onAddPortfolio(newName.trim(), newMode);
+    setShowNewPortfolio(false);
+    setNewName('');
+    setNewMode('simulation');
+  }
 
   return (
     <div className="profile-page">
@@ -64,34 +75,7 @@ export default function Profile({ user, portfolios, brokerMode, onNavigate, onLo
         </div>
       </div>
 
-      {/* Broker koppeling */}
-      <h2 className="profile-section-title">Beleggingsmodus</h2>
-      <div className="profile-card">
-        {['simulation', 'paper', 'live'].map(mode => (
-          <button
-            key={mode}
-            className={`profile-row broker-option ${brokerMode === mode ? 'active' : ''}`}
-            onClick={() => onSetBrokerMode(mode)}
-          >
-            <div className="broker-option-left">
-              <span className={`broker-dot ${brokerMode === mode ? 'active' : ''}`} />
-              <div>
-                <span className="profile-value">{modeLabels[mode]}</span>
-                <span className="portfolio-detail">{modeDescriptions[mode]}</span>
-              </div>
-            </div>
-            {mode === 'live' && <span className="broker-badge">Binnenkort</span>}
-          </button>
-        ))}
-      </div>
-
-      {brokerMode === 'paper' && (
-        <div className="broker-info">
-          Je bent verbonden met Alpaca Paper Trading. Je hebt $100.000 virtueel geld om mee te oefenen.
-        </div>
-      )}
-
-      {/* Portfolio beheer */}
+      {/* Portfolio's */}
       <h2 className="profile-section-title">Mijn portfolio's</h2>
       <div className="profile-card">
         {portfolios && portfolios.map((p, i) => (
@@ -110,24 +94,93 @@ export default function Profile({ user, portfolios, brokerMode, onNavigate, onLo
                 <button className="portfolio-cancel-btn" onClick={() => setEditingId(null)}>Annuleer</button>
               </div>
             ) : (
-              <>
+              <button className="portfolio-select-row" onClick={() => onSwitchPortfolio(i)}>
                 <div className="portfolio-info">
-                  <span className="profile-value">{p.name || `Portfolio ${i + 1}`}</span>
+                  <div className="portfolio-name-row">
+                    <span className="portfolio-mode-dot" style={{ background: modeColors[p.broker_mode || 'simulation'] }} />
+                    <span className="profile-value">{p.name || `Portfolio ${i + 1}`}</span>
+                    {i === activeIndex && <span className="portfolio-active-badge">Actief</span>}
+                  </div>
                   <span className="portfolio-detail">
-                    €{(p.amount || 0).toLocaleString('nl-NL')}
+                    {modeLabels[p.broker_mode || 'simulation']} — €{(p.amount || 0).toLocaleString('nl-NL')}
                   </span>
                 </div>
-                <div className="portfolio-actions">
+                <div className="portfolio-actions" onClick={e => e.stopPropagation()}>
                   <button className="portfolio-edit-btn" onClick={() => startEdit(p, i)}>✎</button>
                   {portfolios.length > 1 && (
                     <button className="portfolio-delete-btn" onClick={() => onDeletePortfolio(i)}>✕</button>
                   )}
                 </div>
-              </>
+              </button>
             )}
           </div>
         ))}
       </div>
+
+      {/* Nieuw portfolio */}
+      {!showNewPortfolio ? (
+        <button className="new-portfolio-btn" onClick={() => setShowNewPortfolio(true)}>
+          + Nieuw portfolio aanmaken
+        </button>
+      ) : (
+        <div className="profile-card new-portfolio-card">
+          <h3 className="new-portfolio-title">Nieuw portfolio</h3>
+
+          <input
+            type="text"
+            className="portfolio-name-input full-width"
+            placeholder="Naam voor je portfolio..."
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            maxLength={30}
+            autoFocus
+          />
+
+          <p className="new-portfolio-label">Kies je modus:</p>
+          <div className="mode-options">
+            <button
+              className={`mode-option ${newMode === 'simulation' ? 'selected' : ''}`}
+              onClick={() => setNewMode('simulation')}
+            >
+              <span className="mode-option-dot" style={{ background: '#4CAF50' }} />
+              <div>
+                <span className="mode-option-title">Simulatie</span>
+                <span className="mode-option-desc">Oefen met nepgeld en echte koersen</span>
+              </div>
+            </button>
+            <button
+              className={`mode-option ${newMode === 'paper' ? 'selected' : ''}`}
+              onClick={() => setNewMode('paper')}
+            >
+              <span className="mode-option-dot" style={{ background: '#FF9800' }} />
+              <div>
+                <span className="mode-option-title">Paper Trading</span>
+                <span className="mode-option-desc">Oefen met virtueel geld via een echte broker</span>
+              </div>
+            </button>
+            <button
+              className={`mode-option ${newMode === 'live' ? 'selected' : ''}`}
+              onClick={() => setNewMode('live')}
+              disabled
+            >
+              <span className="mode-option-dot" style={{ background: '#E0E0E0' }} />
+              <div>
+                <span className="mode-option-title">Live Trading</span>
+                <span className="mode-option-desc">Beleg met echt geld — binnenkort beschikbaar</span>
+              </div>
+            </button>
+          </div>
+
+          <div className="new-portfolio-actions">
+            <button className="portfolio-save-btn" onClick={handleCreatePortfolio} disabled={!newName.trim()}>Aanmaken</button>
+            <button className="portfolio-cancel-btn" onClick={() => { setShowNewPortfolio(false); setNewName(''); }}>Annuleer</button>
+          </div>
+        </div>
+      )}
+
+      <p className="profile-hint">
+        Wil je echt geld beleggen? Maak een nieuw portfolio aan en kies Paper Trading om eerst te oefenen met een echte broker.
+      </p>
 
       <button className="logout-btn" onClick={onLogout}>
         Uitloggen

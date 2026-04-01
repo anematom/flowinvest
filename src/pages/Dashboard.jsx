@@ -450,14 +450,25 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   // Summary — in paper mode gebruik Alpaca data
   const isPaper = brokerMode === 'paper';
   let summary;
-  if (isPaper && alpacaAccount) {
-    const gain = alpacaAccount.equity - 100000; // startkapitaal is $100k
+  if (isPaper && alpacaPositions.length > 0) {
+    const totalValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
+    const totalGain = alpacaPositions.reduce((sum, p) => sum + p.unrealizedPL, 0);
+    const gainPercent = settings.amount > 0 ? ((totalGain / settings.amount) * 100) : 0;
     summary = {
-      currentValue: alpacaAccount.equity,
-      gainLoss: gain,
-      gainLossPercent: ((gain / 100000) * 100).toFixed(2),
-      isPositive: gain >= 0,
+      currentValue: settings.amount + totalGain,
+      gainLoss: totalGain,
+      gainLossPercent: gainPercent.toFixed(2),
+      isPositive: totalGain >= 0,
       status: aiMessage?.message || (alpacaTradeResult ? `AI Modus: ${alpacaTradeResult.mode}` : 'Marktdata wordt geladen...'),
+      currency: '$',
+    };
+  } else if (isPaper) {
+    summary = {
+      currentValue: settings.amount,
+      gainLoss: 0,
+      gainLossPercent: '0.00',
+      isPositive: true,
+      status: 'Wachten op marktopening...',
       currency: '$',
     };
   } else if (liveTotals) {
@@ -501,22 +512,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           {portfolios.map((p, i) => (
             <button
               key={p.id || i}
-              className={`portfolio-tab ${i === activeIndex ? 'active' : ''} ${i === activeIndex && isPaper ? 'paper' : ''}`}
+              className={`portfolio-tab ${i === activeIndex ? 'active' : ''} ${(p.broker_mode || 'simulation') !== 'simulation' ? 'broker' : ''}`}
               onClick={() => onSwitchPortfolio(i)}
             >
-              {i === activeIndex && isPaper && <span className="tab-mode-dot paper" />}
+              <span className="tab-mode-dot" style={{ background: p.broker_mode === 'paper' ? '#FF9800' : p.broker_mode === 'live' ? '#F44336' : '#4CAF50' }} />
               {p.name || `Portfolio ${i + 1}`}
             </button>
           ))}
-          <button
-            className="portfolio-tab add-tab"
-            onClick={() => {
-              const name = prompt('Naam voor je nieuwe portfolio:');
-              if (name) onAddPortfolio(name);
-            }}
-          >
-            +
-          </button>
         </div>
       )}
 

@@ -35,7 +35,7 @@
   border-radius: 16px;
   padding: 4px 0;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .profile-row {
@@ -72,7 +72,25 @@
 }
 
 .portfolio-row {
-  gap: 12px;
+  padding: 0 !important;
+}
+
+.portfolio-select-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.portfolio-select-row:hover {
+  background: #F7F9F8;
 }
 
 .portfolio-info {
@@ -81,9 +99,32 @@
   gap: 2px;
 }
 
+.portfolio-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portfolio-mode-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.portfolio-active-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4CAF50;
+  background: #E3F2FD;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
 .portfolio-detail {
   font-size: 12px;
   color: #90A4AE;
+  margin-left: 18px;
 }
 
 .portfolio-actions {
@@ -93,7 +134,7 @@
 }
 
 .portfolio-edit-btn {
-  background: #E8F5E9;
+  background: #E3F2FD;
   border: none;
   color: #4CAF50;
   width: 32px;
@@ -125,17 +166,24 @@
   gap: 8px;
   width: 100%;
   align-items: center;
+  padding: 14px 20px;
 }
 
 .portfolio-name-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 2px solid #4CAF50;
   border-radius: 10px;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
   outline: none;
+  box-sizing: border-box;
+}
+
+.portfolio-name-input.full-width {
+  width: 100%;
+  margin-bottom: 12px;
 }
 
 .portfolio-save-btn {
@@ -143,12 +191,17 @@
   color: white;
   border: none;
   border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
+  padding: 10px 16px;
+  font-size: 14px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.portfolio-save-btn:disabled {
+  background: #C8E6C9;
+  cursor: not-allowed;
 }
 
 .portfolio-cancel-btn {
@@ -161,60 +214,112 @@
   white-space: nowrap;
 }
 
-/* Broker koppeling */
-.broker-option {
+/* Nieuw portfolio */
+.new-portfolio-btn {
   width: 100%;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
+  padding: 14px;
+  background: white;
+  border: 2px dashed #4CAF50;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
   font-family: 'Inter', sans-serif;
+  color: #4CAF50;
+  cursor: pointer;
+  margin-bottom: 16px;
   transition: background 0.2s;
 }
 
-.broker-option:hover {
-  background: #F7F9F8;
-}
-
-.broker-option.active {
+.new-portfolio-btn:hover {
   background: #E3F2FD;
 }
 
-.broker-option-left {
+.new-portfolio-card {
+  padding: 20px !important;
+}
+
+.new-portfolio-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #263238;
+  margin: 0 0 16px;
+}
+
+.new-portfolio-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #78909C;
+  margin: 0 0 8px;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-option {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 12px 14px;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  text-align: left;
+  transition: all 0.2s;
 }
 
-.broker-dot {
+.mode-option:hover {
+  border-color: #A5D6A7;
+}
+
+.mode-option.selected {
+  border-color: #4CAF50;
+  background: #E3F2FD;
+}
+
+.mode-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mode-option-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #E0E0E0;
   flex-shrink: 0;
 }
 
-.broker-dot.active {
-  border-color: #4CAF50;
-  background: #4CAF50;
+.mode-option-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #263238;
 }
 
-.broker-badge {
-  font-size: 11px;
+.mode-option-desc {
+  display: block;
+  font-size: 12px;
   color: #78909C;
-  background: #F0F0F0;
-  padding: 3px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
+  margin-top: 1px;
 }
 
-.broker-info {
-  background: #E3F2FD;
-  border-radius: 12px;
-  padding: 12px 16px;
+.new-portfolio-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-hint {
   font-size: 13px;
-  color: #1565C0;
+  color: #78909C;
+  text-align: center;
   margin-bottom: 24px;
+  line-height: 1.5;
 }
 
 .logout-btn {
