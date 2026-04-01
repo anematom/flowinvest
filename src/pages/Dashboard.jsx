@@ -42,7 +42,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
-  const portfolioKey = String(settings.id || activeIndex || 0);
+  const portfolioKey = String(settings.id || (settings.name + '_' + activeIndex));
   const holdingsKey = 'flowinvest_holdings_' + portfolioKey;
   const historyKey = 'flowinvest_history_' + portfolioKey;
 
