@@ -12,6 +12,30 @@ app.use(express.json());
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'd76003pr01qm4b7sdp1gd76003pr01qm4b7sdp20';
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
+// ============================================
+// ALPACA — Paper Trading
+// ============================================
+const ALPACA_KEY = process.env.ALPACA_KEY || 'PKRX4RHHPRKUVNS3MD2HHLARDE';
+const ALPACA_SECRET = process.env.ALPACA_SECRET || '83Jy6geLxV23oVrbRXdMjKEKwBVj3gGesh1dFfLfuoZH';
+const ALPACA_BASE = 'https://paper-api.alpaca.markets/v2';
+
+async function alpacaFetch(endpoint, options = {}) {
+  const res = await fetch(`${ALPACA_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'APCA-API-KEY-ID': ALPACA_KEY,
+      'APCA-API-SECRET-KEY': ALPACA_SECRET,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Alpaca error ${res.status}: ${err}`);
+  }
+  return res.json();
+}
+
 // Helper: fetch met error handling
 async function finnhubFetch(endpoint) {
   const url = `${FINNHUB_BASE}${endpoint}&token=${FINNHUB_API_KEY}`;
@@ -231,6 +255,136 @@ app.get('/api/market-status', async (req, res) => {
   try {
     const data = await finnhubFetch('/stock/market-status?exchange=US');
     res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// ALPACA ROUTES
+// ============================================
+
+// Account info (saldo, koopkracht)
+app.get('/api/alpaca/account', async (req, res) => {
+  try {
+    const data = await alpacaFetch('/account');
+    res.json({
+      equity: parseFloat(data.equity),
+      cash: parseFloat(data.cash),
+      buyingPower: parseFloat(data.buying_power),
+      portfolioValue: parseFloat(data.portfolio_value),
+      currency: data.currency,
+      status: data.status,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Huidige posities (wat je bezit)
+app.get('/api/alpaca/positions', async (req, res) => {
+  try {
+    const positions = await alpacaFetch('/positions');
+    res.json(positions.map(p => ({
+      symbol: p.symbol,
+      qty: parseFloat(p.qty),
+      avgBuyPrice: parseFloat(p.avg_entry_price),
+      currentPrice: parseFloat(p.current_price),
+      marketValue: parseFloat(p.market_value),
+      unrealizedPL: parseFloat(p.unrealized_pl),
+      unrealizedPLPercent: parseFloat(p.unrealized_plpc) * 100,
+      side: p.side,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Aandeel kopen
+app.post('/api/alpaca/buy', async (req, res) => {
+  try {
+    const { symbol, amount } = req.body;
+    if (!symbol || !amount) return res.status(400).json({ error: 'symbol en amount zijn verplicht' });
+
+    const order = await alpacaFetch('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        symbol: symbol.toUpperCase(),
+        notional: amount.toString(),
+        side: 'buy',
+        type: 'market',
+        time_in_force: 'day',
+      }),
+    });
+
+    res.json({
+      id: order.id,
+      symbol: order.symbol,
+      side: order.side,
+      amount: amount,
+      status: order.status,
+      message: `${order.symbol} gekocht voor $${amount}`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Aandeel verkopen
+app.post('/api/alpaca/sell', async (req, res) => {
+  try {
+    const { symbol, qty } = req.body;
+    if (!symbol) return res.status(400).json({ error: 'symbol is verplicht' });
+
+    const body = {
+      symbol: symbol.toUpperCase(),
+      side: 'sell',
+      type: 'market',
+      time_in_force: 'day',
+    };
+
+    if (qty) {
+      body.qty = qty.toString();
+    } else {
+      // Verkoop alles
+      const positions = await alpacaFetch('/positions');
+      const position = positions.find(p => p.symbol === symbol.toUpperCase());
+      if (!position) return res.status(400).json({ error: `Geen positie in ${symbol}` });
+      body.qty = position.qty;
+    }
+
+    const order = await alpacaFetch('/orders', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    res.json({
+      id: order.id,
+      symbol: order.symbol,
+      side: order.side,
+      qty: body.qty,
+      status: order.status,
+      message: `${order.symbol} verkocht`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Order geschiedenis
+app.get('/api/alpaca/orders', async (req, res) => {
+  try {
+    const orders = await alpacaFetch('/orders?status=all&limit=20');
+    res.json(orders.map(o => ({
+      id: o.id,
+      symbol: o.symbol,
+      side: o.side,
+      qty: o.qty,
+      notional: o.notional,
+      status: o.status,
+      filledPrice: o.filled_avg_price,
+      createdAt: o.created_at,
+    })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
