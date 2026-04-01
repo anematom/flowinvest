@@ -54,20 +54,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   // Reset alles bij portfolio switch
   useEffect(() => {
-    // Check of opgeslagen history bij dit portfolio hoort
     let saved = [];
     try {
-      const raw = JSON.parse(localStorage.getItem(historyKey));
-      if (raw && raw.length > 0) {
-        // Als eerste snapshot ver van inleg af ligt, is het oude data → wissen
-        const firstValue = raw[0]?.value || 0;
-        if (Math.abs(firstValue - settings.amount) > settings.amount * 0.5) {
-          localStorage.removeItem(historyKey);
-          localStorage.removeItem(holdingsKey);
-        } else {
-          saved = raw;
-        }
-      }
+      saved = JSON.parse(localStorage.getItem(historyKey)) || [];
     } catch {}
     setPortfolioHistoryState(saved);
     setVirtualPortfolio(null);
@@ -133,8 +122,11 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      localStorage.setItem(historyKey, JSON.stringify(next));
-      return next;
+      // Filter ongeldige waarden (0, negatief, of extreem ver van inleg)
+      const filtered = next.filter(s => s.value > 0 && s.value > settings.amount * 0.1);
+      const limited = filtered.slice(-200);
+      localStorage.setItem(historyKey, JSON.stringify(limited));
+      return limited;
     });
   }
   const [activeModal, setActiveModal] = useState(null);
