@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchHistory, fetchStocks } from '../data/marketApi';
+import { fetchPortfolio, fetchHistory, fetchStocks, fetchStockHistory } from '../data/marketApi';
 import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
@@ -75,9 +75,34 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
     });
   }
   const [activeModal, setActiveModal] = useState(null);
+  const [tradeSignals, setTradeSignals] = useState([]);
+  const [stockAnalyses, setStockAnalyses] = useState({});
   const intervalRef = useRef(null);
   const priceIntervalRef = useRef(null);
   const prevValueRef = useRef(null);
+
+  // Technische analyse — laadt indicators lazy om crashes te voorkomen
+  async function runTechnicalAnalysis(portfolio) {
+    if (!portfolio || portfolio.length === 0) return;
+    try {
+      const indicators = await import('../data/indicators');
+      const symbols = portfolio.filter(h => !h.isDefensive).map(h => h.symbol);
+      const historyData = await fetchStockHistory(symbols, 3);
+
+      const analyses = {};
+      for (const symbol of symbols) {
+        const closes = historyData[symbol];
+        if (closes && closes.length > 20) {
+          const currentPrice = closes[closes.length - 1];
+          analyses[symbol] = indicators.analyzeStock(closes, currentPrice);
+        }
+      }
+      setStockAnalyses(analyses);
+      setTradeSignals(indicators.generateTradeActions(portfolio, analyses));
+    } catch {
+      // Historische data niet beschikbaar
+    }
+  }
 
   // Core: fetch data, analyze, and rebalance
   const runSmartCheck = useCallback(async () => {
@@ -243,8 +268,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
           ...prev.slice(0, 19),
         ]);
       }
-      // Technische analyse tijdelijk uit
-      // if (portfolio) runTechnicalAnalysis(portfolio);
+      // Technische analyse uitvoeren na smart check
+      if (portfolio) runTechnicalAnalysis(portfolio);
     } catch {
       // Server niet bereikbaar
     }
@@ -462,6 +487,41 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, onN
           <div className="ai-interval-info">
             Volgende check over 10 minuten
             <button className="refresh-btn" onClick={runSmartCheck}>Nu checken</button>
+          </div>
+        </div>
+      )}
+
+      {/* Trading signalen */}
+      {tradeSignals.length > 0 && (
+        <div className="signals-card">
+          <h3 className="signals-title">Trading Signalen</h3>
+          {tradeSignals.map((signal, i) => (
+            <div key={i} className={`signal-item signal-${signal.type}`}>
+              <div className="signal-top">
+                <span className="signal-action">{signal.action}</span>
+                <span className="signal-symbol">{signal.symbol}</span>
+              </div>
+              <span className="signal-reason">{signal.reason}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Technische analyse per aandeel */}
+      {Object.keys(stockAnalyses).length > 0 && (
+        <div className="signals-card">
+          <h3 className="signals-title">Technische Analyse</h3>
+          <div className="analysis-grid">
+            {Object.entries(stockAnalyses).map(([symbol, analysis]) => (
+              <div key={symbol} className="analysis-item">
+                <span className="analysis-symbol">{symbol}</span>
+                <div className="analysis-signals">
+                  {analysis.signals.map((s, i) => (
+                    <span key={i} className={`analysis-tag tag-${s.type}`}>{s.text}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
