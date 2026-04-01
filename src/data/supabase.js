@@ -107,15 +107,36 @@ export async function loadPortfolioHoldings(portfolioId) {
 
 export async function savePortfolioHoldings(portfolioId, holdings, history) {
   if (!portfolioId) return;
-  const { error } = await supabase
+
+  // Check of er al een record bestaat
+  const { data: existing } = await supabase
     .from('portfolio_holdings')
-    .upsert({
-      portfolio_id: portfolioId,
-      holdings: holdings || [],
-      history: (history || []).slice(-200),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'portfolio_id' });
-  if (error) throw error;
+    .select('id')
+    .eq('portfolio_id', portfolioId)
+    .single();
+
+  const updateData = { updated_at: new Date().toISOString() };
+  if (holdings !== null && holdings !== undefined) updateData.holdings = holdings;
+  if (history !== null && history !== undefined) updateData.history = history.slice(-200);
+
+  if (existing) {
+    // Update alleen de velden die meegegeven zijn
+    const { error } = await supabase
+      .from('portfolio_holdings')
+      .update(updateData)
+      .eq('portfolio_id', portfolioId);
+    if (error) throw error;
+  } else {
+    // Insert nieuw record
+    const { error } = await supabase
+      .from('portfolio_holdings')
+      .insert({
+        portfolio_id: portfolioId,
+        holdings: holdings || [],
+        history: history ? history.slice(-200) : [],
+      });
+    if (error) throw error;
+  }
 }
 
 // ========== Transactions ==========
