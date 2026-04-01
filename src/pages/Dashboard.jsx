@@ -243,6 +243,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           weight: h.weight, rank: h.rank, shares: h.shares,
           invested: h.invested, buyPrice: h.buyPrice || h.price, isDefensive: h.isDefensive || false,
         }));
+        dbHoldingsRef.current = holdingsToSave;
         if (portfolioId) {
           savePortfolioHoldings(portfolioId, holdingsToSave, null).catch(() => {});
         }
@@ -322,6 +323,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           symbol: h.symbol, name: h.name, weight: h.weight,
           shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price,
         }));
+        dbHoldingsRef.current = etfHoldingsToSave;
         if (portfolioId) {
           savePortfolioHoldings(portfolioId, etfHoldingsToSave, null).catch(() => {});
         }
