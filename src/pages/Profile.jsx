@@ -120,7 +120,14 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
                 <div className="portfolio-actions" onClick={e => e.stopPropagation()}>
                   <button className="portfolio-edit-btn" onClick={() => startEdit(p, i)}>✎</button>
                   {portfolios.length > 1 && (
-                    <button className="portfolio-delete-btn" onClick={() => onDeletePortfolio(i)}>✕</button>
+                    <button className="portfolio-delete-btn" onClick={() => {
+                      const mode = p.broker_mode || 'simulation';
+                      let msg = 'Weet je zeker dat je dit portfolio wilt verwijderen?';
+                      if (mode === 'paper' || mode === 'live') {
+                        msg += '\n\nLet op: je posities bij Alpaca blijven staan. Log in op alpaca.markets om ze te beheren.';
+                      }
+                      if (confirm(msg)) onDeletePortfolio(i);
+                    }}>✕</button>
                   )}
                 </div>
               </button>
