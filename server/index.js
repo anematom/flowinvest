@@ -9,7 +9,7 @@ app.use(express.json());
 // CONFIGURATIE - Vul hier je Finnhub API key in
 // Gratis te verkrijgen op: https://finnhub.io/register
 // ============================================
-const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'd76nul9r01qtg3neb54gd76nul9r01qtg3neb550';
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
 // ============================================
