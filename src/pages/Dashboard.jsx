@@ -39,9 +39,28 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [aiLog, setAiLog] = useState([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null);
   const [priceFlash, setPriceFlash] = useState(null); // 'up' | 'down' | null
-  const portfolioKey = String(settings.id || (settings.name + '_' + activeIndex));
+  const portfolioKey = settings.id ? String(settings.id) : (settings.name + '_' + activeIndex);
   const holdingsKey = 'flowinvest_holdings_' + portfolioKey;
   const historyKey = 'flowinvest_history_' + portfolioKey;
+
+  // Migreer data van oude key naar nieuwe key (eenmalig)
+  useEffect(() => {
+    if (!settings.id) return;
+    const oldKey = settings.name + '_' + activeIndex;
+    const oldHistoryKey = 'flowinvest_history_' + oldKey;
+    const oldHoldingsKey = 'flowinvest_holdings_' + oldKey;
+    const newHistoryKey = 'flowinvest_history_' + settings.id;
+    const newHoldingsKey = 'flowinvest_holdings_' + settings.id;
+
+    if (!localStorage.getItem(newHistoryKey) && localStorage.getItem(oldHistoryKey)) {
+      localStorage.setItem(newHistoryKey, localStorage.getItem(oldHistoryKey));
+      localStorage.removeItem(oldHistoryKey);
+    }
+    if (!localStorage.getItem(newHoldingsKey) && localStorage.getItem(oldHoldingsKey)) {
+      localStorage.setItem(newHoldingsKey, localStorage.getItem(oldHoldingsKey));
+      localStorage.removeItem(oldHoldingsKey);
+    }
+  }, [settings.id]);
 
   const [portfolioHistory, setPortfolioHistoryState] = useState(() => {
     try {
