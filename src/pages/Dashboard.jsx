@@ -45,16 +45,41 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   const [portfolioHistory, setPortfolioHistoryState] = useState([]);
 
+  // Cache per portfolio ID — alleen lezen, nooit schrijven vanuit andere portfolio
+  const cacheRef = useRef({});
+  const prevPortfolioIdRef = useRef(null);
+
   // Laad holdings en history uit Supabase bij portfolio switch
   useEffect(() => {
+    // Sla huidige data op in cache van het VORIGE portfolio
+    if (prevPortfolioIdRef.current && prevPortfolioIdRef.current !== portfolioId) {
+      cacheRef.current[prevPortfolioIdRef.current] = {
+        virtualPortfolio, liveTotals, marketAnalysis, aiMessage, trades, aiLog, lastCheck,
+      };
+    }
+    prevPortfolioIdRef.current = portfolioId;
+
     setDbLoaded(false);
-    setVirtualPortfolio(null);
-    setLiveTotals(null);
-    setMarketAnalysis(null);
-    setAiMessage(null);
-    setTrades([]);
-    setAiLog([]);
-    setLastCheck(null);
+
+    // Probeer uit cache te laden
+    const cached = portfolioId ? cacheRef.current[portfolioId] : null;
+    if (cached) {
+      setVirtualPortfolio(cached.virtualPortfolio);
+      setLiveTotals(cached.liveTotals);
+      setMarketAnalysis(cached.marketAnalysis);
+      setAiMessage(cached.aiMessage);
+      setTrades(cached.trades);
+      setAiLog(cached.aiLog);
+      setLastCheck(cached.lastCheck);
+    } else {
+      setVirtualPortfolio(null);
+      setLiveTotals(null);
+      setMarketAnalysis(null);
+      setAiMessage(null);
+      setTrades([]);
+      setAiLog([]);
+      setLastCheck(null);
+    }
     setLastPriceUpdate(null);
     setPortfolioHistoryState([]);
     prevValueRef.current = null;
