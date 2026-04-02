@@ -232,7 +232,11 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
           </div>
           <span className="advanced-badge coming">Binnenkort</span>
         </div>
-        <div className="advanced-strategy">
+        <button className="advanced-strategy clickable" onClick={() => {
+          if (confirm('Let op: Day Trading is zeer risicovol. 92% van day traders verliest geld.\n\nJe kunt je volledige inleg verliezen. Dit is een demo om de strategie te verkennen.\n\nWil je doorgaan?')) {
+            onNavigate('daytrade');
+          }
+        }}>
           <div className="advanced-strategy-left">
             <span className="advanced-icon">⏱️</span>
             <div>
@@ -240,8 +244,8 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
               <span className="advanced-desc">Kopen en verkopen binnen één dag. Vereist ervaring — 92% verliest geld.</span>
             </div>
           </div>
-          <span className="advanced-badge coming">Binnenkort</span>
-        </div>
+          <span className="advanced-badge crypto">Start</span>
+        </button>
       </div>
 
       <button className="logout-btn" onClick={onLogout}>

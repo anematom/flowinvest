@@ -1,7 +1,17 @@
 import express from 'express';
 import cors from 'cors';
+import { DayTradingEngine } from './daytrader.js';
 
 const app = express();
+
+// Day Trading Engine (global instance)
+const dayTrader = new DayTradingEngine({
+  startCapital: 10000,
+  riskPercent: 2,
+  stopLoss: 1.5,
+  takeProfit: 3,
+  maxPositions: 3,
+});
 app.use(cors());
 app.use(express.json());
 
@@ -759,6 +769,63 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ============================================
+// DAY TRADING DEMO
+// ============================================
+const DAY_TRADE_SYMBOLS = ['NVDA', 'AMD', 'GOOGL', 'AAPL', 'TSLA'];
+let dayTradeInterval = null;
+let dayTradeActive = false;
+
+async function dayTradeTick() {
+  const now = new Date();
+  const timestamp = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  for (const symbol of DAY_TRADE_SYMBOLS) {
+    try {
+      const data = await finnhubFetch(`/quote?symbol=${symbol}`);
+      if (data.c) {
+        dayTrader.tick(symbol, data.c, timestamp);
+      }
+    } catch {}
+  }
+}
+
+// Start/stop day trading
+app.post('/api/daytrade/start', (req, res) => {
+  if (dayTradeActive) return res.json({ status: 'already_running' });
+  dayTradeActive = true;
+  dayTradeTick(); // eerste tick direct
+  dayTradeInterval = setInterval(dayTradeTick, 60 * 1000); // elke minuut
+  res.json({ status: 'started', message: 'Day trading gestart — checkt elke minuut' });
+});
+
+app.post('/api/daytrade/stop', (req, res) => {
+  dayTradeActive = false;
+  if (dayTradeInterval) clearInterval(dayTradeInterval);
+  dayTradeInterval = null;
+  res.json({ status: 'stopped' });
+});
+
+app.get('/api/daytrade/status', (req, res) => {
+  res.json({ active: dayTradeActive, ...dayTrader.getStatus() });
+});
+
+app.post('/api/daytrade/reset', (req, res) => {
+  dayTradeActive = false;
+  if (dayTradeInterval) clearInterval(dayTradeInterval);
+  dayTradeInterval = null;
+  // Reset engine
+  dayTrader.capital = dayTrader.startCapital;
+  dayTrader.positions = {};
+  dayTrader.priceHistory = {};
+  dayTrader.trades = [];
+  dayTrader.equityCurve = [];
+  dayTrader.totalWins = 0;
+  dayTrader.totalLosses = 0;
+  dayTrader.dayPnL = 0;
+  res.json({ status: 'reset' });
 });
 
 // ============================================

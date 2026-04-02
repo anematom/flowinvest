@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
 import Profile from './pages/Profile';
 import AlpacaSetup from './pages/AlpacaSetup';
+import DayTrade from './pages/DayTrade';
 import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut, loadAlpacaKeys, saveAlpacaKeys } from './data/supabase';
 import './App.css';
 
@@ -199,6 +200,10 @@ function App() {
 
   if (!activePortfolio) {
     return <Onboarding onComplete={handleOnboardingComplete} portfolioName="Mijn portfolio" />;
+  }
+
+  if (page === 'daytrade') {
+    return <DayTrade onNavigate={handleNavigate} />;
   }
 
   if (page === 'assistant') {

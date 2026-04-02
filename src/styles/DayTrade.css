@@ -1,0 +1,367 @@
+.daytrade-page {
+  min-height: 100vh;
+  background: #F7F9F8;
+  padding: 24px 20px 120px;
+  font-family: 'Inter', sans-serif;
+}
+
+.daytrade-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #78909C;
+  font-size: 16px;
+}
+
+/* Header */
+.daytrade-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.daytrade-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #263238;
+  margin: 0;
+}
+
+.daytrade-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.daytrade-status-badge.running {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.daytrade-status-badge.stopped {
+  background: #FAFAFA;
+  color: #9E9E9E;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.daytrade-status-badge.running .status-dot {
+  background: #4CAF50;
+  animation: pulse 1.5s infinite;
+}
+
+.daytrade-status-badge.stopped .status-dot {
+  background: #BDBDBD;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Controls */
+.daytrade-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.dt-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dt-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dt-btn-start {
+  background: #4CAF50;
+  color: white;
+}
+
+.dt-btn-start:not(:disabled):hover {
+  background: #388E3C;
+}
+
+.dt-btn-stop {
+  background: #EF5350;
+  color: white;
+}
+
+.dt-btn-stop:not(:disabled):hover {
+  background: #D32F2F;
+}
+
+.dt-btn-reset {
+  background: #E0E0E0;
+  color: #424242;
+}
+
+.dt-btn-reset:not(:disabled):hover {
+  background: #BDBDBD;
+}
+
+/* Stats grid */
+.daytrade-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.daytrade-stats .dt-stat-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.dt-stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dt-stat-label {
+  font-size: 12px;
+  color: #78909C;
+  font-weight: 500;
+}
+
+.dt-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.dt-stat-value.positive {
+  color: #4CAF50;
+}
+
+.dt-stat-value.negative {
+  color: #EF5350;
+}
+
+/* Cards */
+.daytrade-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+}
+
+.dt-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #263238;
+  margin: 0 0 14px 0;
+}
+
+.dt-chart-container {
+  margin: 0 -10px;
+}
+
+.dt-empty {
+  color: #B0BEC5;
+  font-size: 14px;
+  text-align: center;
+  padding: 16px 0;
+  margin: 0;
+}
+
+/* Positions */
+.dt-positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dt-position-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #FAFAFA;
+  border-radius: 12px;
+}
+
+.dt-position-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dt-position-symbol {
+  font-size: 15px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.dt-position-qty {
+  font-size: 12px;
+  color: #78909C;
+}
+
+.dt-position-pl {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dt-position-pl.positive {
+  color: #4CAF50;
+}
+
+.dt-position-pl.negative {
+  color: #EF5350;
+}
+
+/* Trades */
+.dt-trades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dt-trade-row {
+  padding: 12px 14px;
+  background: #FAFAFA;
+  border-radius: 12px;
+}
+
+.dt-trade-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dt-trade-side {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.dt-trade-side.buy {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.dt-trade-side.sell {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.dt-trade-symbol {
+  font-size: 14px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.dt-trade-qty {
+  font-size: 12px;
+  color: #78909C;
+}
+
+.dt-trade-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dt-trade-reason {
+  font-size: 12px;
+  color: #78909C;
+  font-style: italic;
+}
+
+.dt-trade-time {
+  font-size: 11px;
+  color: #B0BEC5;
+}
+
+/* Data points */
+.dt-datapoints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dt-datapoint-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #FAFAFA;
+  border-radius: 10px;
+}
+
+.dt-datapoint-symbol {
+  font-size: 14px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.dt-datapoint-count {
+  font-size: 13px;
+  color: #78909C;
+  font-weight: 500;
+}
+
+/* Bottom nav - reuse from Profile/Dashboard */
+.daytrade-page .bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  background: white;
+  border-top: 1px solid #F0F0F0;
+  padding: 10px 0 env(safe-area-inset-bottom, 10px);
+  z-index: 100;
+}
+
+.daytrade-page .nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #78909C;
+  cursor: pointer;
+  padding: 4px 16px;
+}
+
+.daytrade-page .nav-btn.active {
+  color: #4CAF50;
+}
+
+.daytrade-page .nav-icon {
+  font-size: 20px;
+}
