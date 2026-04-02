@@ -1010,6 +1010,13 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // ============================================
+// HEALTH CHECK
+// ============================================
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ============================================
 // SERVER START
 // ============================================
 const PORT = process.env.PORT || 3001;

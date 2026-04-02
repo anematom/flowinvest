@@ -14,12 +14,28 @@ const modeColors = {
   live: '#4CAF50',
 };
 
+const RISK_PROFILES = [
+  { label: 'Voorzichtig', rate: 0.10 },
+  { label: 'Gebalanceerd', rate: 0.16 },
+  { label: 'Ambitieus', rate: 0.19 },
+  { label: 'Maximaal', rate: 0.17 },
+];
+
+function calcFV(pmt, annualRate, years) {
+  const r = annualRate / 12;
+  const n = years * 12;
+  if (r === 0) return pmt * n;
+  return pmt * ((Math.pow(1 + r, n) - 1) / r);
+}
+
 export default function Profile({ user, portfolios, activeIndex, alpacaConnected, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
   const [newName, setNewName] = useState('');
   const [newMode, setNewMode] = useState('simulation');
+  const [calcProfile, setCalcProfile] = useState(0);
+  const [calcDeposit, setCalcDeposit] = useState(200);
 
   function startEdit(portfolio, index) {
     setEditingId(index);
@@ -221,6 +237,61 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
       <p className="profile-hint">
         Wil je echt geld beleggen? Maak een nieuw portfolio aan en kies Paper Trading om eerst te oefenen met een echte broker.
       </p>
+
+      {/* Rendementsverwachting calculator */}
+      <h2 className="profile-section-title">Rendementsverwachting</h2>
+      <div className="profile-card calc-section">
+        <div className="calc-inputs">
+          <div>
+            <label className="profile-label">Risicoprofiel</label>
+            <select
+              value={calcProfile}
+              onChange={e => setCalcProfile(Number(e.target.value))}
+              className="portfolio-name-input"
+            >
+              {RISK_PROFILES.map((p, i) => (
+                <option key={i} value={i}>{p.label} ({Math.round(p.rate * 100)}%)</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="profile-label">Maandelijkse inleg</label>
+            <input
+              type="number"
+              className="portfolio-name-input"
+              value={calcDeposit}
+              onChange={e => setCalcDeposit(Number(e.target.value))}
+              min={0}
+              step={50}
+            />
+          </div>
+        </div>
+        <table className="calc-table">
+          <thead>
+            <tr>
+              <th>Periode</th>
+              <th>Ingelegd</th>
+              <th>Verwachte waarde</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 3, 5, 10, 20].map(y => {
+              const fv = calcFV(calcDeposit, RISK_PROFILES[calcProfile].rate, y);
+              const totalDeposited = calcDeposit * 12 * y;
+              return (
+                <tr key={y}>
+                  <td>{y} jaar</td>
+                  <td>{'\u20AC'}{totalDeposited.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}</td>
+                  <td className="calc-fv">{'\u20AC'}{Math.round(fv).toLocaleString('nl-NL')}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className="calc-disclaimer">
+          Let op: dit is een schatting op basis van historisch rendement (10 jaar). De toekomst is niet te voorspellen. Je kunt ook geld verliezen.
+        </p>
+      </div>
 
       {/* Geavanceerde strategieën */}
       <h2 className="profile-section-title">Geavanceerde strategieën</h2>

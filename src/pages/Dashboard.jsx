@@ -45,10 +45,35 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [dbLoaded, setDbLoaded] = useState(false);
 
   const [portfolioHistory, setPortfolioHistoryState] = useState([]);
+  const [serverHealthy, setServerHealthy] = useState(true);
+  const healthFailRef = useRef(0);
 
   // Cache per portfolio ID — alleen lezen, nooit schrijven vanuit andere portfolio
   const cacheRef = useRef({});
   const prevPortfolioIdRef = useRef(null);
+
+  // Server health check — elke 2 minuten
+  useEffect(() => {
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          healthFailRef.current = 0;
+          setServerHealthy(true);
+        } else {
+          throw new Error('not ok');
+        }
+      } catch {
+        healthFailRef.current += 1;
+        if (healthFailRef.current >= 2) {
+          setServerHealthy(false);
+        }
+      }
+    }
+    checkHealth();
+    const id = setInterval(checkHealth, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Laad holdings en history uit Supabase bij portfolio switch
   useEffect(() => {
@@ -576,6 +601,11 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   return (
     <div className="dashboard">
+      {!serverHealthy && (
+        <div className="server-warning">
+          De FlowInvest server is tijdelijk niet bereikbaar. Je geld staat veilig bij je broker (Alpaca). Je kunt altijd inloggen op alpaca.markets om je posities te bekijken of te verkopen. We zijn bezig met herstel.
+        </div>
+      )}
       {/* Header */}
       <div className="dash-header">
         <div>
