@@ -1,21 +1,21 @@
 // FlowInvest Smart AI — Automatische portfolio manager
 // Checkt elke 10 minuten de markt en herbalanceert indien nodig
 
-// Drempels voor actie
+// Drempels voor actie — geoptimaliseerd op basis van backtest (1 jaar, 8 aandelen)
 const THRESHOLDS = {
   // Bij hoeveel % daling schakelen we naar defensief?
-  defenseMode: -2.0,        // -2% op een dag = defensief
-  panicMode: -5.0,          // -5% op een dag = maximaal defensief
-  recoveryMode: 1.5,        // +1.5% = terug naar normaal
+  defenseMode: -3.0,        // -3% op een dag = defensief (was -2%)
+  panicMode: -7.0,          // -7% op een dag = maximaal defensief (was -5%)
+  recoveryMode: 2.0,        // +2% = terug naar normaal (was 1.5%)
 
   // Stop-loss: maximaal verlies voordat we verkopen
-  stopLoss: -10.0,          // -10% totaal verlies = alles naar veilig
+  stopLoss: -15.0,          // -15% totaal verlies (was -10%, meer ruimte voor herstel)
 
   // Buy the dip: wanneer bijkopen?
-  buyDipThreshold: -3.0,    // -3% = kans om bij te kopen
+  buyDipThreshold: -5.0,    // -5% = kans om bij te kopen (was -3%, alleen echte dips)
 
   // Minimale verandering voordat we herbalanceren
-  minRebalance: 1.0,        // Pas herbalanceren als allocatie >1% afwijkt
+  minRebalance: 1.5,        // Pas herbalanceren als allocatie >1.5% afwijkt (was 1%, minder handelen)
 };
 
 // Defensieve allocaties (meer obligaties, minder aandelen)

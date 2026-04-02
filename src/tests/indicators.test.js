@@ -79,25 +79,25 @@ describe('getMASignal', () => {
 });
 
 describe('checkTakeProfit', () => {
-  it('triggert bij +15% of meer', () => {
-    expect(checkTakeProfit({ gainPercent: 15 })).toBe(true);
-    expect(checkTakeProfit({ gainPercent: 20 })).toBe(true);
+  it('triggert bij +999% of meer (effectief uitgeschakeld)', () => {
+    expect(checkTakeProfit({ gainPercent: 999 })).toBe(true);
+    expect(checkTakeProfit({ gainPercent: 1000 })).toBe(true);
   });
 
-  it('triggert niet onder +15%', () => {
-    expect(checkTakeProfit({ gainPercent: 10 })).toBe(false);
-    expect(checkTakeProfit({ gainPercent: 0 })).toBe(false);
+  it('triggert niet onder +999%', () => {
+    expect(checkTakeProfit({ gainPercent: 15 })).toBe(false);
+    expect(checkTakeProfit({ gainPercent: 100 })).toBe(false);
   });
 });
 
 describe('checkStopLossHolding', () => {
-  it('triggert bij -10% of meer', () => {
-    expect(checkStopLossHolding({ gainPercent: -10 })).toBe(true);
+  it('triggert bij -15% of meer', () => {
     expect(checkStopLossHolding({ gainPercent: -15 })).toBe(true);
+    expect(checkStopLossHolding({ gainPercent: -20 })).toBe(true);
   });
 
-  it('triggert niet boven -10%', () => {
-    expect(checkStopLossHolding({ gainPercent: -5 })).toBe(false);
+  it('triggert niet boven -15%', () => {
+    expect(checkStopLossHolding({ gainPercent: -10 })).toBe(false);
     expect(checkStopLossHolding({ gainPercent: 5 })).toBe(false);
   });
 });

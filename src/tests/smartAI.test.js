@@ -27,19 +27,19 @@ const crashMarket = [
 ];
 
 const dipMarket = [
-  { symbol: 'SPY', changePercent: -3.0 },
-  { symbol: 'VTI', changePercent: -2.5 },
-  { symbol: 'VXUS', changePercent: -3.5 },
-  { symbol: 'BND', changePercent: 0.2 },
-  { symbol: 'VGK', changePercent: -2.0 },
+  { symbol: 'SPY', changePercent: -4.0 },
+  { symbol: 'VTI', changePercent: -3.5 },
+  { symbol: 'VXUS', changePercent: -4.5 },
+  { symbol: 'BND', changePercent: -1.0 },
+  { symbol: 'VGK', changePercent: -3.0 },
 ];
 
 const recoveryMarket = [
-  { symbol: 'SPY', changePercent: 2.0 },
-  { symbol: 'VTI', changePercent: 1.8 },
-  { symbol: 'VXUS', changePercent: 2.5 },
-  { symbol: 'BND', changePercent: 0.5 },
-  { symbol: 'VGK', changePercent: 1.5 },
+  { symbol: 'SPY', changePercent: 3.0 },
+  { symbol: 'VTI', changePercent: 2.5 },
+  { symbol: 'VXUS', changePercent: 3.5 },
+  { symbol: 'BND', changePercent: 1.0 },
+  { symbol: 'VGK', changePercent: 2.5 },
 ];
 
 describe('analyzeMarket', () => {
@@ -96,11 +96,11 @@ describe('analyzeUltraMarket', () => {
     expect(result.worstStock.symbol).toBe('META');
   });
 
-  it('detecteert crisis bij -10%+', () => {
+  it('detecteert crisis bij -15%+', () => {
     const crisisQuotes = [
-      { symbol: 'A', changePercent: -12.0 },
-      { symbol: 'B', changePercent: -11.0 },
-      { symbol: 'C', changePercent: -10.0 },
+      { symbol: 'A', changePercent: -17.0 },
+      { symbol: 'B', changePercent: -16.0 },
+      { symbol: 'C', changePercent: -15.0 },
     ];
     const result = analyzeUltraMarket(crisisQuotes);
     expect(result.mode).toBe('crisis');
@@ -108,9 +108,9 @@ describe('analyzeUltraMarket', () => {
 
   it('heeft defensiveShift bij daling', () => {
     const defenseQuotes = [
-      { symbol: 'A', changePercent: -3.0 },
-      { symbol: 'B', changePercent: -2.5 },
-      { symbol: 'C', changePercent: -3.5 },
+      { symbol: 'A', changePercent: -4.0 },
+      { symbol: 'B', changePercent: -3.5 },
+      { symbol: 'C', changePercent: -4.5 },
     ];
     const result = analyzeUltraMarket(defenseQuotes);
     expect(result.defensiveShift).toBeDefined();
@@ -137,13 +137,13 @@ describe('getSmartAllocation', () => {
 });
 
 describe('checkStopLoss', () => {
-  it('triggert bij -10% of meer', () => {
-    expect(checkStopLoss(-10)).toBe(true);
+  it('triggert bij -15% of meer', () => {
     expect(checkStopLoss(-15)).toBe(true);
+    expect(checkStopLoss(-20)).toBe(true);
   });
 
-  it('triggert niet bij minder dan -10%', () => {
-    expect(checkStopLoss(-5)).toBe(false);
+  it('triggert niet bij minder dan -15%', () => {
+    expect(checkStopLoss(-10)).toBe(false);
     expect(checkStopLoss(0)).toBe(false);
     expect(checkStopLoss(5)).toBe(false);
   });
@@ -152,7 +152,7 @@ describe('checkStopLoss', () => {
 describe('getMarketMessage', () => {
   it('geeft stop-loss bericht bij groot verlies', () => {
     const analysis = { mode: 'normal', avgChange: 0 };
-    const msg = getMarketMessage(analysis, [], -12);
+    const msg = getMarketMessage(analysis, [], -16);
     expect(msg.type).toBe('warning');
     expect(msg.title).toContain('Stop-loss');
   });

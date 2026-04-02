@@ -74,14 +74,14 @@ export function analyzeStock(closes, currentPrice) {
   let score = 0; // -2 tot +2
   let signals = [];
 
-  // RSI signaal
+  // RSI signaal — geoptimaliseerd: 20/80 (minder handelen = beter)
   if (rsi !== null) {
-    if (rsi < 30) {
+    if (rsi < 20) {
       score += 1;
-      signals.push({ type: 'positive', text: `RSI ${rsi.toFixed(0)} — oversold, koopkans` });
-    } else if (rsi > 70) {
+      signals.push({ type: 'positive', text: `RSI ${rsi.toFixed(0)} — sterk oversold, koopkans` });
+    } else if (rsi > 80) {
       score -= 1;
-      signals.push({ type: 'warning', text: `RSI ${rsi.toFixed(0)} — overbought, overweeg verkoop` });
+      signals.push({ type: 'warning', text: `RSI ${rsi.toFixed(0)} — sterk overbought, overweeg verkoop` });
     } else {
       signals.push({ type: 'neutral', text: `RSI ${rsi.toFixed(0)} — neutraal` });
     }
@@ -112,12 +112,12 @@ export function analyzeStock(closes, currentPrice) {
   return { rsi, maSignal, score, signals, action };
 }
 
-// Stop-loss en take-profit check
-export function checkTakeProfit(holding, takeProfitPercent = 15) {
+// Stop-loss check — geen take-profit (laten groeien is beter volgens backtest)
+export function checkTakeProfit(holding, takeProfitPercent = 999) {
   return holding.gainPercent >= takeProfitPercent;
 }
 
-export function checkStopLossHolding(holding, stopLossPercent = -10) {
+export function checkStopLossHolding(holding, stopLossPercent = -15) {
   return holding.gainPercent <= stopLossPercent;
 }
 

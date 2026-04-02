@@ -458,13 +458,13 @@ app.get('/api/alpaca/orders', async (req, res) => {
 
 // Drempels (zelfde als frontend smartAI)
 const TRADE_THRESHOLDS = {
-  defenseMode: -2.0,
-  panicMode: -5.0,
-  crisisMode: -10.0,
-  recoveryMode: 1.5,
-  stopLoss: -10.0,
-  takeProfit: 15.0,
-  buyDip: -3.0,
+  defenseMode: -3.0,       // was -2 (meer ruimte)
+  panicMode: -7.0,         // was -5
+  crisisMode: -12.0,       // was -10
+  recoveryMode: 2.0,       // was 1.5
+  stopLoss: -15.0,         // was -10 (meer ruimte voor herstel)
+  takeProfit: 999,          // was 15 (niet verkopen bij winst, laten groeien)
+  buyDip: -5.0,            // was -3 (alleen echte dips)
 };
 
 // Defensieve verdeling per risicoprofiel
