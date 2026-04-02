@@ -447,6 +447,11 @@
   color: #4CAF50;
 }
 
+.calc-fv.highlight {
+  color: #9C27B0;
+  font-weight: 700;
+}
+
 .calc-inflation {
   font-weight: 600;
   color: #FF9800;

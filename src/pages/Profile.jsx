@@ -16,10 +16,11 @@ const modeColors = {
 
 // Historische rendementen (bronnen: S&P 500 1928-2025, NYU Stern, NerdWallet)
 const RISK_PROFILES = [
-  { label: 'Voorzichtig', rate: 0.066, desc: 'Obligaties + ETFs' },
-  { label: 'Gebalanceerd', rate: 0.087, desc: '60% aandelen / 40% obligaties' },
-  { label: 'Ambitieus', rate: 0.10, desc: 'S&P 500 ETF' },
-  { label: 'Maximaal', rate: 0.125, desc: 'Losse aandelen + momentum' },
+  { label: 'Voorzichtig', rate: 0.066, desc: 'Obligaties + ETFs — historisch gemiddelde (97 jaar)' },
+  { label: 'Gebalanceerd', rate: 0.087, desc: '60% aandelen / 40% obligaties — historisch gemiddelde (97 jaar)' },
+  { label: 'Ambitieus', rate: 0.10, desc: 'S&P 500 ETF — historisch gemiddelde (97 jaar)' },
+  { label: 'Maximaal', rate: 0.125, desc: 'Losse aandelen + momentum — conservatieve schatting' },
+  { label: 'FlowInvest AI', rate: 0.17, desc: 'Getest met deze app over 2016-2026 (10 jaar) — ambitieus', highlight: true },
 ];
 const INFLATION = 0.03; // 3% gemiddelde inflatie
 
@@ -281,7 +282,7 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
                     <td>€{deposited.toLocaleString('nl-NL')}</td>
                     {RISK_PROFILES.map((p, i) => {
                       const fv = calcFV(calcDeposit, p.rate, y);
-                      return <td key={i} className="calc-fv">€{Math.round(fv).toLocaleString('nl-NL')}</td>;
+                      return <td key={i} className={`calc-fv${p.highlight ? ' highlight' : ''}`}>€{Math.round(fv).toLocaleString('nl-NL')}</td>;
                     })}
                     <td className="calc-inflation">€{Math.round(afterInflation).toLocaleString('nl-NL')}</td>
                   </tr>
@@ -303,7 +304,7 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
         </div>
 
         <p className="calc-disclaimer">
-          Rendementen zijn gebaseerd op historische data (S&P 500 sinds 1928, bron: NYU Stern). Gemiddeld rendement over 97 jaar. De toekomst is niet te voorspellen — je kunt ook geld verliezen. Dit is geen financieel advies.
+          Rendementen zijn gebaseerd op historische data (S&P 500 sinds 1928, bron: NYU Stern). Gemiddeld rendement over 97 jaar. Het Maximaal profiel (12.5%) is gebaseerd op een conservatieve schatting. In onze eigen backtest behaalde de FlowInvest AI-strategie 17% per jaar over de afgelopen 10 jaar (2016-2026), maar deze periode was uitzonderlijk goed door de tech- en AI-boom. We rekenen bewust met een lager percentage. De toekomst is niet te voorspellen — je kunt ook geld verliezen. Dit is geen financieel advies.
         </p>
       </div>
 
