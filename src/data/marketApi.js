@@ -37,14 +37,16 @@ export async function fetchTopStocks(count = 5) {
 }
 
 // ========== Alpaca ==========
-export async function fetchAlpacaAccount() {
-  const res = await fetch(`${API_BASE}/alpaca/account`);
+export async function fetchAlpacaAccount(keys, live) {
+  const params = keys ? `?apiKey=${keys.apiKey}&secretKey=${keys.secretKey}&live=${live}` : '';
+  const res = await fetch(`${API_BASE}/alpaca/account${params}`);
   if (!res.ok) throw new Error('Failed to fetch Alpaca account');
   return res.json();
 }
 
-export async function fetchAlpacaPositions() {
-  const res = await fetch(`${API_BASE}/alpaca/positions`);
+export async function fetchAlpacaPositions(keys, live) {
+  const params = keys ? `?apiKey=${keys.apiKey}&secretKey=${keys.secretKey}&live=${live}` : '';
+  const res = await fetch(`${API_BASE}/alpaca/positions${params}`);
   if (!res.ok) throw new Error('Failed to fetch Alpaca positions');
   return res.json();
 }

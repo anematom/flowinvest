@@ -135,8 +135,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     async function loadAlpaca() {
       try {
         const [account, positions, emergencyStatus] = await Promise.all([
-          fetchAlpacaAccount(),
-          fetchAlpacaPositions(),
+          fetchAlpacaAccount(alpacaKeys, brokerMode === 'live'),
+          fetchAlpacaPositions(alpacaKeys, brokerMode === 'live'),
           fetchEmergencyStatus(),
         ]);
         setAlpacaAccount(account);

@@ -417,9 +417,24 @@ app.get('/api/market-status', async (req, res) => {
 // ============================================
 
 // Account info (saldo, koopkracht)
+// Helper: maak een alpaca fetch met optionele user keys
+function makeAlpacaFetcher(apiKey, secretKey, live) {
+  const base = live ? ALPACA_LIVE_BASE : ALPACA_BASE;
+  const key = apiKey || ALPACA_KEY;
+  const secret = secretKey || ALPACA_SECRET;
+  return async (endpoint) => {
+    const r = await fetch(`${base}${endpoint}`, {
+      headers: { 'APCA-API-KEY-ID': key, 'APCA-API-SECRET-KEY': secret, 'Content-Type': 'application/json' },
+    });
+    if (!r.ok) throw new Error(`Alpaca error ${r.status}`);
+    return r.json();
+  };
+}
+
 app.get('/api/alpaca/account', async (req, res) => {
   try {
-    const data = await alpacaFetch('/account');
+    const fetcher = makeAlpacaFetcher(req.query.apiKey, req.query.secretKey, req.query.live === 'true');
+    const data = await fetcher('/account');
     res.json({
       equity: parseFloat(data.equity),
       cash: parseFloat(data.cash),
@@ -436,7 +451,8 @@ app.get('/api/alpaca/account', async (req, res) => {
 // Huidige posities (wat je bezit)
 app.get('/api/alpaca/positions', async (req, res) => {
   try {
-    const positions = await alpacaFetch('/positions');
+    const fetcher = makeAlpacaFetcher(req.query.apiKey, req.query.secretKey, req.query.live === 'true');
+    const positions = await fetcher('/positions');
     res.json(positions.map(p => ({
       symbol: p.symbol,
       qty: parseFloat(p.qty),
