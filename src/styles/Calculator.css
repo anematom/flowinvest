@@ -25,15 +25,9 @@
 /* Profiel selector */
 .calc-profile-selector {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
-}
-
-.calc-profile-selector::-webkit-scrollbar {
-  display: none;
 }
 
 .calc-profile-btn {
