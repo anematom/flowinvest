@@ -138,11 +138,8 @@
 
 .calc-two-inputs {
   display: flex;
-  gap: 16px;
-}
-
-.calc-two-inputs > div {
-  flex: 1;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .calc-input-row {
