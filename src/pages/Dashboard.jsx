@@ -45,43 +45,18 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   const [portfolioHistory, setPortfolioHistoryState] = useState([]);
 
-  // Cache per portfolio — instant switchen
-  const cacheRef = useRef({});
-
-  // Sla huidige state op in cache
-  useEffect(() => {
-    return () => {
-      if (portfolioId) {
-        cacheRef.current[portfolioId] = {
-          virtualPortfolio, liveTotals, marketAnalysis, aiMessage, trades, aiLog, lastCheck,
-        };
-      }
-    };
-  });
-
   // Laad holdings en history uit Supabase bij portfolio switch
   useEffect(() => {
     setDbLoaded(false);
-
-    const cached = cacheRef.current[portfolioId];
-    if (cached) {
-      setVirtualPortfolio(cached.virtualPortfolio);
-      setLiveTotals(cached.liveTotals);
-      setMarketAnalysis(cached.marketAnalysis);
-      setAiMessage(cached.aiMessage);
-      setTrades(cached.trades);
-      setAiLog(cached.aiLog);
-      setLastCheck(cached.lastCheck);
-    } else {
-      setVirtualPortfolio(null);
-      setLiveTotals(null);
-      setMarketAnalysis(null);
-      setAiMessage(null);
-      setTrades([]);
-      setAiLog([]);
-      setLastCheck(null);
-    }
+    setVirtualPortfolio(null);
+    setLiveTotals(null);
+    setMarketAnalysis(null);
+    setAiMessage(null);
+    setTrades([]);
+    setAiLog([]);
+    setLastCheck(null);
     setLastPriceUpdate(null);
+    setPortfolioHistoryState([]);
     prevValueRef.current = null;
 
     // Laad uit Supabase
