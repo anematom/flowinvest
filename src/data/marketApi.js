@@ -105,6 +105,18 @@ export async function fetchAlpacaOrders() {
   return res.json();
 }
 
+export async function fetchSentiment(symbol) {
+  const res = await fetch(`${API_BASE}/sentiment/${symbol}`);
+  if (!res.ok) return { score: 0, sentiment: 'neutral' };
+  return res.json();
+}
+
+export async function fetchBulkSentiment() {
+  const res = await fetch(`${API_BASE}/sentiment`);
+  if (!res.ok) return {};
+  return res.json();
+}
+
 export async function fetchCrypto() {
   const res = await fetch(`${API_BASE}/crypto`);
   if (!res.ok) throw new Error('Failed to fetch crypto');

@@ -150,6 +150,95 @@ app.get('/api/portfolio', async (req, res) => {
 });
 
 // ============================================
+// SENTIMENTANALYSE
+// ============================================
+
+// Cache voor sentiment (niet elke keer opnieuw analyseren)
+const sentimentCache = {};
+const SENTIMENT_CACHE_TTL = 30 * 60 * 1000; // 30 minuten
+
+app.get('/api/sentiment/:symbol', async (req, res) => {
+  const symbol = req.params.symbol.toUpperCase();
+
+  // Check cache
+  if (sentimentCache[symbol] && Date.now() - sentimentCache[symbol].timestamp < SENTIMENT_CACHE_TTL) {
+    return res.json(sentimentCache[symbol].data);
+  }
+
+  try {
+    // Haal nieuws op van Finnhub
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const newsData = await finnhubFetch(`/company-news?symbol=${symbol}&from=${weekAgo}&to=${today}`);
+
+    if (!newsData || newsData.length === 0) {
+      return res.json({ symbol, sentiment: 'neutral', score: 0, headlines: 0 });
+    }
+
+    // Neem de laatste 10 headlines
+    const headlines = newsData.slice(0, 10).map(n => n.headline).join('\n');
+
+    // Analyseer met Gemini AI
+    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_KEY) {
+      return res.json({ symbol, sentiment: 'neutral', score: 0, headlines: newsData.length, reason: 'Geen AI key' });
+    }
+
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(GEMINI_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+    const prompt = `Analyseer deze nieuwskoppen voor het aandeel ${symbol}. Geef een sentiment score van -10 (zeer negatief) tot +10 (zeer positief). Antwoord ALLEEN met een JSON object: {"score": <nummer>, "sentiment": "positive"|"negative"|"neutral", "reason": "<korte uitleg in het Nederlands>"}\n\nHeadlines:\n${headlines}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+
+    // Parse JSON uit response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const data = { symbol, ...parsed, headlines: newsData.length, analyzedAt: new Date().toISOString() };
+      sentimentCache[symbol] = { data, timestamp: Date.now() };
+      return res.json(data);
+    }
+
+    res.json({ symbol, sentiment: 'neutral', score: 0, headlines: newsData.length });
+  } catch (err) {
+    res.json({ symbol, sentiment: 'neutral', score: 0, error: err.message });
+  }
+});
+
+// Bulk sentiment voor alle momentum aandelen
+app.get('/api/sentiment', async (req, res) => {
+  try {
+    const symbols = MOMENTUM_STOCKS.map(s => s.symbol);
+    const results = {};
+    for (const sym of symbols.slice(0, 5)) { // Max 5 om rate limits te voorkomen
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const newsData = await finnhubFetch(`/company-news?symbol=${sym}&from=${weekAgo}&to=${today}`);
+        const positiveWords = ['buy', 'upgrade', 'beat', 'surge', 'rally', 'growth', 'strong', 'record', 'bullish', 'outperform', 'raised', 'positive'];
+        const negativeWords = ['sell', 'downgrade', 'miss', 'drop', 'fall', 'decline', 'weak', 'loss', 'bearish', 'underperform', 'cut', 'warning'];
+
+        let score = 0;
+        const headlines = newsData.slice(0, 15);
+        for (const article of headlines) {
+          const h = article.headline.toLowerCase();
+          for (const w of positiveWords) if (h.includes(w)) score += 1;
+          for (const w of negativeWords) if (h.includes(w)) score -= 1;
+        }
+
+        results[sym] = { score, sentiment: score > 2 ? 'positive' : score < -2 ? 'negative' : 'neutral', headlines: newsData.length };
+      } catch { results[sym] = { score: 0, sentiment: 'neutral' }; }
+    }
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // CRYPTO
 // ============================================
 const CRYPTO_COINS = [
