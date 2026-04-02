@@ -44,10 +44,24 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
   }
 
   const hasPaperPortfolio = portfolios.some(p => p.broker_mode === 'paper');
+  const hasLivePortfolio = portfolios.some(p => p.broker_mode === 'live');
 
   function handleCreatePortfolio() {
     if (!newName.trim()) return;
     if (newMode === 'paper' && hasPaperPortfolio) return;
+    if (newMode === 'live' && hasLivePortfolio) return;
+
+    if (newMode === 'live') {
+      const confirmed = confirm(
+        '⚠️ LET OP: Je staat op het punt een Live Trading portfolio aan te maken.\n\n' +
+        '• Alle trades worden uitgevoerd met ECHT geld.\n' +
+        '• Je kunt geld verliezen — er is geen garantie op winst.\n' +
+        '• FlowInvest is niet aansprakelijk voor eventuele verliezen.\n\n' +
+        'Weet je zeker dat je wilt doorgaan?'
+      );
+      if (!confirmed) return;
+    }
+
     onAddPortfolio(newName.trim(), newMode);
     setShowNewPortfolio(false);
     setNewName('');
@@ -180,13 +194,19 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
             </button>
             <button
               className={`mode-option ${newMode === 'live' ? 'selected' : ''}`}
-              onClick={() => setNewMode('live')}
-              disabled
+              onClick={() => !hasLivePortfolio && alpacaConnected && setNewMode('live')}
+              disabled={hasLivePortfolio || !alpacaConnected}
             >
-              <span className="mode-option-dot" style={{ background: '#E0E0E0' }} />
+              <span className="mode-option-dot" style={{ background: (hasLivePortfolio || !alpacaConnected) ? '#E0E0E0' : '#4CAF50' }} />
               <div>
                 <span className="mode-option-title">Live Trading</span>
-                <span className="mode-option-desc">Beleg met echt geld — binnenkort beschikbaar</span>
+                <span className="mode-option-desc">
+                  {hasLivePortfolio
+                    ? 'Je hebt al een live trading portfolio'
+                    : !alpacaConnected
+                    ? 'Verbind eerst je Alpaca account'
+                    : 'Beleg met echt geld via Alpaca'}
+                </span>
               </div>
             </button>
           </div>

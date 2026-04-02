@@ -122,7 +122,7 @@ function App() {
   }
 
   function handleAddPortfolio(name, brokerMode, strategy) {
-    if (brokerMode === 'paper' && !alpacaKeys) {
+    if ((brokerMode === 'paper' || brokerMode === 'live') && !alpacaKeys) {
       setOnboardingMode({ name, brokerMode, strategy });
       setShowAlpacaSetup(true);
       return;

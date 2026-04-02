@@ -104,9 +104,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     }
   }, [portfolioId]);
 
-  // Alpaca data laden en auto-traden in paper mode
+  // Alpaca data laden en auto-traden in paper/live mode
   useEffect(() => {
-    if (brokerMode !== 'paper') return;
+    if (brokerMode !== 'paper' && brokerMode !== 'live') return;
     async function loadAlpaca() {
       try {
         const [account, positions, emergencyStatus] = await Promise.all([
@@ -127,7 +127,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     // Auto-trade elke 10 minuten
     async function runAutoTrade() {
       try {
-        const result = await alpacaAutoTrade(settings.risk, settings.amount, alpacaKeys);
+        const keysWithMode = alpacaKeys ? { ...alpacaKeys, live: brokerMode === 'live' } : alpacaKeys;
+        const result = await alpacaAutoTrade(settings.risk, settings.amount, keysWithMode);
         setAlpacaTradeResult(result);
         loadAlpaca(); // Herlaad data na trades
       } catch (err) {
@@ -595,6 +596,14 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
               {p.name || `Portfolio ${i + 1}`}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Live trading warning */}
+      {brokerMode === 'live' && (
+        <div className="live-warning">
+          <span className="live-warning-icon">&#9888;</span>
+          Je belegt met echt geld. Alle trades worden uitgevoerd op de beurs.
         </div>
       )}
 

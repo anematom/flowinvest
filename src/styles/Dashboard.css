@@ -1047,6 +1047,26 @@
   color: #2E7D32;
 }
 
+/* Live trading warning banner */
+.live-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin: 0 16px 8px;
+  background: linear-gradient(135deg, #FFF3E0, #FFEBEE);
+  border: 1.5px solid #FF9800;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #E65100;
+}
+
+.live-warning-icon {
+  font-size: 16px;
+}
+
 /* Alpaca card */
 .alpaca-card {
   background: white;

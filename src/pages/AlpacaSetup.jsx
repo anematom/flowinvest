@@ -27,7 +27,9 @@ Je kunt altijd direct inloggen op alpaca.markets om je geld op te nemen — onaf
 
 Kies voor "Individual Account" en vul je gegevens in. Dit duurt ongeveer 5 minuten.
 
-Belangrijk: je begint automatisch met Paper Trading. Dat betekent dat je oefent met nep-geld ($100.000). Er is geen risico.`,
+Belangrijk: je begint automatisch met Paper Trading. Dat betekent dat je oefent met nep-geld ($100.000). Er is geen risico.
+
+Tip: dezelfde API-sleutels werken voor zowel Paper Trading als Live Trading. De modus kies je later bij het aanmaken van een portfolio.`,
     link: 'https://alpaca.markets',
     linkText: 'Ga naar Alpaca',
   },

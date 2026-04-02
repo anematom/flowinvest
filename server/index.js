@@ -28,6 +28,7 @@ const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const ALPACA_KEY = process.env.ALPACA_KEY || '';
 const ALPACA_SECRET = process.env.ALPACA_SECRET || '';
 const ALPACA_BASE = 'https://paper-api.alpaca.markets/v2';
+const ALPACA_LIVE_BASE = 'https://api.alpaca.markets/v2';
 
 async function alpacaFetch(endpoint, options = {}) {
   const res = await fetch(`${ALPACA_BASE}${endpoint}`, {
@@ -660,13 +661,15 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     // Gebruik user-specifieke keys als beschikbaar
     const useKey = userKeys?.apiKey || ALPACA_KEY;
     const useSecret = userKeys?.secretKey || ALPACA_SECRET;
+    const isLive = userKeys?.live === true;
+    const baseUrl = isLive ? ALPACA_LIVE_BASE : ALPACA_BASE;
     if (!useKey || !useSecret) {
       return res.json({ action: 'skip', reason: 'Geen Alpaca keys geconfigureerd', trades: [] });
     }
 
     // User-specifieke Alpaca fetch
     async function userAlpacaFetch(endpoint, options = {}) {
-      const r = await fetch(`${ALPACA_BASE}${endpoint}`, {
+      const r = await fetch(`${baseUrl}${endpoint}`, {
         ...options,
         headers: {
           'APCA-API-KEY-ID': useKey,
