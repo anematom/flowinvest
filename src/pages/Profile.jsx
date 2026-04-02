@@ -210,7 +210,7 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
       <div className="profile-card">
         <button className="advanced-strategy clickable" onClick={() => {
           if (confirm('Let op: Crypto is zeer volatiel. Je kunt je volledige inleg verliezen.\n\nDe waarde kan binnen uren met 20% of meer dalen. Beleg alleen met geld dat je kunt missen.\n\nWil je doorgaan?')) {
-            onAddPortfolio('Crypto Portfolio', 'simulation');
+            onAddPortfolio('Crypto Portfolio', 'simulation', 'crypto');
           }
         }}>
           <div className="advanced-strategy-left">

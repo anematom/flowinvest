@@ -66,21 +66,30 @@ function getRecommendedRisk(goal, horizon) {
   return riskAdvice[goal]?.[horizon] || null;
 }
 
-export default function Onboarding({ onComplete, portfolioName }) {
+export default function Onboarding({ onComplete, portfolioName, strategy }) {
   const hasName = !!portfolioName;
-  const [step, setStep] = useState(hasName ? 2 : 0); // Skip welkom + naam als naam al gegeven is
+  const isCrypto = strategy === 'crypto';
+  // Bij crypto: skip welkom, naam, doel, horizon en risico — alleen bedrag vragen
+  const startStep = isCrypto ? 2 : (hasName ? 2 : 0);
+  const [step, setStep] = useState(startStep);
   const [name, setName] = useState(portfolioName || '');
   const [settings, setSettings] = useState({
     amount: 100,
     customAmount: '',
-    goal: '',
-    horizon: '',
-    risk: '',
+    goal: isCrypto ? 'growth' : '',
+    horizon: isCrypto ? '3-10' : '',
+    risk: isCrypto ? 'crypto' : '',
   });
 
   const currentStep = steps[step];
 
   function next() {
+    // Bij crypto: na het bedrag direct afronden
+    if (isCrypto && currentStep.key === 'amount') {
+      const amount = settings.customAmount ? parseInt(settings.customAmount) : settings.amount;
+      onComplete({ ...settings, amount, name: name || 'Crypto Portfolio' });
+      return;
+    }
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {

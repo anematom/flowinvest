@@ -74,8 +74,10 @@ function App() {
 
   async function handleOnboardingComplete(userSettings) {
     const brokerMode = onboardingMode?.brokerMode || 'simulation';
+    const strategy = onboardingMode?.strategy;
     const name = userSettings.name || onboardingMode?.name || 'Mijn portfolio';
-    const newPortfolio = { name, broker_mode: brokerMode, ...userSettings };
+    const risk = strategy || userSettings.risk;
+    const newPortfolio = { name, broker_mode: brokerMode, ...userSettings, risk };
 
     if (user) {
       try {
@@ -118,15 +120,13 @@ function App() {
     }
   }
 
-  function handleAddPortfolio(name, brokerMode) {
+  function handleAddPortfolio(name, brokerMode, strategy) {
     if (brokerMode === 'paper' && !alpacaKeys) {
-      // Geen keys → toon setup flow
-      setOnboardingMode({ name, brokerMode });
+      setOnboardingMode({ name, brokerMode, strategy });
       setShowAlpacaSetup(true);
       return;
     }
-    // Keys al aanwezig → skip setup, direct naar onboarding
-    setOnboardingMode({ name, brokerMode: brokerMode || 'simulation' });
+    setOnboardingMode({ name, brokerMode: brokerMode || 'simulation', strategy });
     setPage('onboarding');
   }
 
@@ -194,7 +194,7 @@ function App() {
   }
 
   if (page === 'onboarding') {
-    return <Onboarding onComplete={handleOnboardingComplete} portfolioName={onboardingMode?.name} />;
+    return <Onboarding onComplete={handleOnboardingComplete} portfolioName={onboardingMode?.name} strategy={onboardingMode?.strategy} />;
   }
 
   if (!activePortfolio) {
