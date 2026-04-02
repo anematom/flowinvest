@@ -193,6 +193,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   // Core: fetch data, analyze, and rebalance
   const runSmartCheck = useCallback(async () => {
+    // Wacht tot holdings uit database geladen zijn
+    if (!dbLoaded) return;
+
     try {
       if (isUltraMode(settings.risk)) {
         // === ULTRA MODUS: Losse aandelen ===
@@ -362,7 +365,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     } catch {
       // Server niet bereikbaar
     }
-  }, [settings.amount, settings.risk]);
+  }, [settings.amount, settings.risk, dbLoaded]);
 
   // Snelle price refresh (elke 30 sec) — alleen koersen updaten
   const refreshPrices = useCallback(async () => {
