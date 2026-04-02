@@ -934,20 +934,24 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           <span className="info-label">Inleg <span className="edit-icon">✎</span></span>
           <span className="info-value">€{settings.amount.toLocaleString('nl-NL')}</span>
         </div>
-        <div className="info-card clickable" onClick={() => setActiveModal('goal')}>
-          <span className="info-label">Doel <span className="edit-icon">✎</span></span>
-          <span className="info-value">{goalLabels[settings.goal]}</span>
-        </div>
-        <div className="info-card clickable" onClick={() => setActiveModal('horizon')}>
-          <span className="info-label">Horizon <span className="edit-icon">✎</span></span>
-          <span className="info-value">{settings.horizon} jaar</span>
-        </div>
-        <div className="info-card clickable" onClick={() => setActiveModal('risk')}>
-          <span className="info-label">Risico <span className="edit-icon">✎</span></span>
-          <span className="info-value">
-            {settings.risk === 'low' ? 'Voorzichtig' : settings.risk === 'medium' ? 'Gebalanceerd' : settings.risk === 'high' ? 'Ambitieus' : 'Maximaal'}
-          </span>
-        </div>
+        {!isCryptoMode(settings.risk) && (
+          <>
+            <div className="info-card clickable" onClick={() => setActiveModal('goal')}>
+              <span className="info-label">Doel <span className="edit-icon">✎</span></span>
+              <span className="info-value">{goalLabels[settings.goal]}</span>
+            </div>
+            <div className="info-card clickable" onClick={() => setActiveModal('horizon')}>
+              <span className="info-label">Horizon <span className="edit-icon">✎</span></span>
+              <span className="info-value">{settings.horizon} jaar</span>
+            </div>
+            <div className="info-card clickable" onClick={() => setActiveModal('risk')}>
+              <span className="info-label">Risico <span className="edit-icon">✎</span></span>
+              <span className="info-value">
+                {settings.risk === 'low' ? 'Voorzichtig' : settings.risk === 'medium' ? 'Gebalanceerd' : settings.risk === 'high' ? 'Ambitieus' : settings.risk === 'crypto' ? 'Crypto' : 'Maximaal'}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modals */}
