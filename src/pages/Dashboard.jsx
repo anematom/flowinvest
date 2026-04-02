@@ -645,7 +645,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       {brokerMode === 'live' && (
         <div className="live-warning">
           <span className="live-warning-icon">&#9888;</span>
-          Je belegt met echt geld. Alle trades worden uitgevoerd op de beurs.
+          <span>Je belegt met echt geld. Alle trades worden uitgevoerd op de beurs.</span>
+          <button className="live-warning-close" onClick={e => e.target.closest('.live-warning').style.display='none'}>✕</button>
         </div>
       )}
 

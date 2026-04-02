@@ -1063,7 +1063,6 @@
 .live-warning {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   padding: 10px 16px;
   margin: 0 16px 8px;
@@ -1077,6 +1076,24 @@
 
 .live-warning-icon {
   font-size: 16px;
+}
+
+.live-warning span {
+  flex: 1;
+}
+
+.live-warning-close {
+  background: none;
+  border: none;
+  color: #E65100;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.6;
+}
+
+.live-warning-close:hover {
+  opacity: 1;
 }
 
 /* Alpaca card */
