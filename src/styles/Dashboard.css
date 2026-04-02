@@ -20,8 +20,12 @@
 
 .dash-logo {
   width: 85%;
+  max-width: 350px;
   height: auto;
   margin-bottom: 8px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .dash-title {
