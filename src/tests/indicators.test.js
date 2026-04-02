@@ -4,7 +4,7 @@ import {
   calculateSMA,
   getMASignal,
   analyzeStock,
-  checkTakeProfit,
+  checkTrailingStop,
   checkStopLossHolding,
   generateTradeActions,
 } from '../data/indicators';
@@ -78,15 +78,15 @@ describe('getMASignal', () => {
   });
 });
 
-describe('checkTakeProfit', () => {
-  it('triggert bij +999% of meer (effectief uitgeschakeld)', () => {
-    expect(checkTakeProfit({ gainPercent: 999 })).toBe(true);
-    expect(checkTakeProfit({ gainPercent: 1000 })).toBe(true);
+describe('checkTrailingStop', () => {
+  it('triggert als prijs 10% daalt vanaf top', () => {
+    expect(checkTrailingStop({ price: 90, highPrice: 100 })).toBe(true);
+    expect(checkTrailingStop({ price: 85, highPrice: 100 })).toBe(true);
   });
 
-  it('triggert niet onder +999%', () => {
-    expect(checkTakeProfit({ gainPercent: 15 })).toBe(false);
-    expect(checkTakeProfit({ gainPercent: 100 })).toBe(false);
+  it('triggert niet als prijs minder dan 10% daalt', () => {
+    expect(checkTrailingStop({ price: 95, highPrice: 100 })).toBe(false);
+    expect(checkTrailingStop({ price: 100, highPrice: 100 })).toBe(false);
   });
 });
 
@@ -122,19 +122,19 @@ describe('analyzeStock', () => {
 
 describe('generateTradeActions', () => {
   it('genereert stop-loss actie bij groot verlies', () => {
-    const holdings = [{ symbol: 'NVDA', gainPercent: -12 }];
+    const holdings = [{ symbol: 'NVDA', gainPercent: -16 }];
     const analyses = { NVDA: { action: 'hold', signals: [] } };
     const actions = generateTradeActions(holdings, analyses);
     const stopLoss = actions.find(a => a.action === 'STOP_LOSS');
     expect(stopLoss).toBeDefined();
   });
 
-  it('genereert take-profit actie bij grote winst', () => {
-    const holdings = [{ symbol: 'NVDA', gainPercent: 18 }];
+  it('genereert trailing stop bij daling vanaf top', () => {
+    const holdings = [{ symbol: 'NVDA', gainPercent: 5, price: 88, highPrice: 100 }];
     const analyses = { NVDA: { action: 'hold', signals: [] } };
     const actions = generateTradeActions(holdings, analyses);
-    const takeProfit = actions.find(a => a.action === 'TAKE_PROFIT');
-    expect(takeProfit).toBeDefined();
+    const trailing = actions.find(a => a.action === 'TRAILING_STOP');
+    expect(trailing).toBeDefined();
   });
 
   it('genereert geen acties bij neutrale markt', () => {
