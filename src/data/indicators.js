@@ -112,11 +112,15 @@ export function analyzeStock(closes, currentPrice) {
   return { rsi, maSignal, score, signals, action };
 }
 
-// Stop-loss check — geen take-profit (laten groeien is beter volgens backtest)
-export function checkTakeProfit(holding, takeProfitPercent = 999) {
-  return holding.gainPercent >= takeProfitPercent;
+// Trailing stop-loss: beschermt winst door mee te schuiven met de hoogste waarde
+// highPrice = hoogste prijs sinds aankoop, trailingPercent = hoeveel % het mag dalen vanaf de top
+export function checkTrailingStop(holding, trailingPercent = 10) {
+  if (!holding.highPrice || !holding.price) return false;
+  const dropFromHigh = ((holding.price - holding.highPrice) / holding.highPrice) * 100;
+  return dropFromHigh <= -trailingPercent;
 }
 
+// Vaste stop-loss op aankoopprijs
 export function checkStopLossHolding(holding, stopLossPercent = -15) {
   return holding.gainPercent <= stopLossPercent;
 }
@@ -129,18 +133,19 @@ export function generateTradeActions(holdings, stockAnalyses) {
     const analysis = stockAnalyses[holding.symbol];
     if (!analysis) continue;
 
-    // Take-profit: winst > 15% → verkoop gedeeltelijk
-    if (checkTakeProfit(holding, 15)) {
+    // Trailing stop-loss: als prijs 10% daalt vanaf de hoogste waarde
+    if (holding.highPrice && checkTrailingStop(holding, 10)) {
+      const dropFromHigh = ((holding.price - holding.highPrice) / holding.highPrice * 100).toFixed(1);
       actions.push({
         symbol: holding.symbol,
-        action: 'TAKE_PROFIT',
-        reason: `+${holding.gainPercent.toFixed(1)}% winst — gedeeltelijk winst nemen`,
-        type: 'positive',
+        action: 'TRAILING_STOP',
+        reason: `${dropFromHigh}% gedaald vanaf top ($${holding.highPrice?.toFixed(2)}) — winst beschermd`,
+        type: 'warning',
       });
     }
 
-    // Stop-loss: verlies > 10% → verkoop
-    if (checkStopLossHolding(holding, -10)) {
+    // Vaste stop-loss: verlies > 15% vanaf aankoopprijs
+    else if (checkStopLossHolding(holding, -15)) {
       actions.push({
         symbol: holding.symbol,
         action: 'STOP_LOSS',

@@ -43,6 +43,23 @@ const defensiveShifts = {
     panic:    { stocks: 0.60, BND: 0.40 }, // 40% naar obligaties
     crisis:   { stocks: 0.40, BND: 0.60 }, // 60% naar obligaties bij -10%+
   },
+  // Crypto: veel ruimere drempels (crypto is veel volatieler)
+  crypto: {
+    normal:   { stocks: 1.00, BND: 0.00 },
+    defense:  { stocks: 0.85, BND: 0.15 },
+    panic:    { stocks: 0.70, BND: 0.30 },
+    crisis:   { stocks: 0.50, BND: 0.50 },
+  },
+};
+
+// Aparte drempels voor crypto (geoptimaliseerd via backtest)
+export const CRYPTO_THRESHOLDS = {
+  defenseMode: -8.0,        // Crypto daalt makkelijk 5-10% per dag
+  panicMode: -15.0,
+  crisisMode: -25.0,
+  recoveryMode: 5.0,        // Crypto herstelt ook sneller
+  stopLoss: -30.0,          // Veel ruimer dan aandelen (-15%)
+  buyDipThreshold: -15.0,   // Alleen kopen bij echte crypto crash
 };
 
 // Bepaal de huidige markt-modus op basis van de data

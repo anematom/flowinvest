@@ -12,6 +12,7 @@ import {
   getMarketMessage,
   getUltraMessage,
   formatLastCheck,
+  CRYPTO_THRESHOLDS,
 } from '../data/smartAI';
 import { MoneyModal, EditModal } from './SettingsModal';
 import '../styles/Dashboard.css';
@@ -232,7 +233,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           const holdingsToSave = portfolio.map(h => ({
             symbol: h.symbol, name: h.name, description: h.description,
             weight: h.weight, rank: h.rank, shares: h.shares,
-            invested: h.invested, buyPrice: h.price, isCrypto: true,
+            invested: h.invested, buyPrice: h.price, highPrice: h.price, isCrypto: true,
           }));
           dbHoldingsRef.current = holdingsToSave;
           if (portfolioId) {
@@ -305,7 +306,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         const holdingsToSave = portfolio.map(h => ({
           symbol: h.symbol, name: h.name, description: h.description,
           weight: h.weight, rank: h.rank, shares: h.shares,
-          invested: h.invested, buyPrice: h.buyPrice || h.price, isDefensive: h.isDefensive || false,
+          invested: h.invested, buyPrice: h.buyPrice || h.price, highPrice: h.highPrice || h.price, isDefensive: h.isDefensive || false,
         }));
         dbHoldingsRef.current = holdingsToSave;
         if (portfolioId) {
@@ -385,7 +386,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
         const etfHoldingsToSave = portfolio.map(h => ({
           symbol: h.symbol, name: h.name, weight: h.weight,
-          shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price,
+          shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price, highPrice: h.highPrice || h.price,
         }));
         dbHoldingsRef.current = etfHoldingsToSave;
         if (portfolioId) {
@@ -448,12 +449,16 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         const gain = currentValue - holding.invested;
         const gainPercent = holding.invested > 0 ? (gain / holding.invested) * 100 : 0;
 
+        // Track hoogste prijs voor trailing stop-loss
+        const highPrice = Math.max(holding.highPrice || holding.buyPrice || quote.price, quote.price);
+
         return {
           ...holding,
           currentValue,
           gain,
           gainPercent,
           price: quote.price,
+          highPrice,
           changePercent: quote.changePercent,
         };
       });

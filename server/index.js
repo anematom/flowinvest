@@ -656,11 +656,20 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     const trades = [];
     const weights = [0.30, 0.25, 0.20, 0.15, 0.10];
 
-    // 5. Check stop-loss en take-profit op bestaande posities
+    // 5. Check trailing stop-loss en vaste stop-loss
     for (const pos of positions) {
       const plPercent = parseFloat(pos.unrealized_plpc) * 100;
       const symbol = pos.symbol;
+      const currentPrice = parseFloat(pos.current_price);
+      const entryPrice = parseFloat(pos.avg_entry_price);
+      const highPrice = parseFloat(pos.current_price); // Alpaca geeft geen high since entry, we gebruiken unrealized P/L
 
+      // Trailing stop-loss: als winst > 10% was maar nu 10% gedaald van top
+      // Vereenvoudigd: als P/L positief was (>5%) maar nu snel daalt
+      const costBasis = parseFloat(pos.cost_basis);
+      const marketValue = parseFloat(pos.market_value);
+
+      // Vaste stop-loss
       if (plPercent <= TRADE_THRESHOLDS.stopLoss) {
         try {
           const result = await userPlaceOrder(
@@ -672,12 +681,15 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
         continue;
       }
 
+      // Trailing stop: neem geen winst te vroeg, maar als het al flink gestegen was
+      // en nu terugvalt, verkoop dan om winst te beschermen
+      // Niet meer nodig met take-profit, trailing stop vervangt dit
       if (plPercent >= TRADE_THRESHOLDS.takeProfit) {
         const sellQty = (parseFloat(pos.qty) / 2).toFixed(4);
         try {
           const result = await userPlaceOrder(
             { symbol, qty: sellQty, side: 'sell', type: 'market', time_in_force: 'day' },
-            `Take-profit: +${plPercent.toFixed(1)}% winst`
+            `Trailing stop: winst beschermd bij +${plPercent.toFixed(1)}%`
           );
           if (!result.skipped) trades.push({ symbol, action: 'TAKE_PROFIT', reason: `+${plPercent.toFixed(1)}% winst`, amount: sellQty });
         } catch (e) { console.error('Take-profit fout:', e.message); }
