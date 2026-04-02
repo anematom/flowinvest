@@ -244,6 +244,18 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setCurrentMode(mode);
 
         let savedHoldings = dbHoldingsRef.current;
+
+        // BEVEILIGING: als ref leeg is, probeer nogmaals uit Supabase te laden
+        if (!savedHoldings && portfolioId) {
+          try {
+            const dbData = await loadPortfolioHoldings(portfolioId);
+            if (dbData && dbData.holdings && dbData.holdings.length > 0) {
+              savedHoldings = dbData.holdings;
+              dbHoldingsRef.current = savedHoldings;
+            }
+          } catch {}
+        }
+
         let portfolio;
         if (savedHoldings && savedHoldings.length > 0) {
           portfolio = savedHoldings.map(h => {
@@ -304,6 +316,17 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
         // 2. Bouw portfolio met huidige top 5 — roteer als nodig
         let savedHoldings = dbHoldingsRef.current;
+
+        // BEVEILIGING: als ref leeg is, probeer nogmaals uit Supabase te laden
+        if (!savedHoldings && portfolioId) {
+          try {
+            const dbData = await loadPortfolioHoldings(portfolioId);
+            if (dbData && dbData.holdings && dbData.holdings.length > 0) {
+              savedHoldings = dbData.holdings;
+              dbHoldingsRef.current = savedHoldings;
+            }
+          } catch {}
+        }
 
         // Altijd nieuw portfolio bouwen met huidige top 5
         const freshPortfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
@@ -387,6 +410,17 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
         // 3. Bouw portfolio met huidige allocatie — behoud aankoopprijzen
         let savedETF = dbHoldingsRef.current;
+
+        // BEVEILIGING: als ref leeg is, probeer nogmaals uit Supabase te laden
+        if (!savedETF && portfolioId) {
+          try {
+            const dbData = await loadPortfolioHoldings(portfolioId);
+            if (dbData && dbData.holdings && dbData.holdings.length > 0) {
+              savedETF = dbData.holdings;
+              dbHoldingsRef.current = savedETF;
+            }
+          } catch {}
+        }
 
         const allocArray = Object.entries(smartAllocation).map(([symbol, weight]) => {
           const quote = quotes.find(q => q.symbol === symbol);
