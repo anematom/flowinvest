@@ -191,7 +191,12 @@ function App() {
   }
 
   if (showAlpacaSetup) {
-    return <AlpacaSetup onComplete={handleAlpacaSetupComplete} onCancel={() => { setShowAlpacaSetup(false); setOnboardingMode(null); }} />;
+    return <AlpacaSetup
+      onComplete={handleAlpacaSetupComplete}
+      onCancel={() => { setShowAlpacaSetup(false); setOnboardingMode(null); }}
+      isLive={onboardingMode?.brokerMode === 'live'}
+      alreadyConnected={!!alpacaKeys}
+    />;
   }
 
   if (page === 'onboarding') {

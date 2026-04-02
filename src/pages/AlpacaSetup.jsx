@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import '../styles/AlpacaSetup.css';
 
-const steps = [
+const paperSteps = [
   {
     key: 'intro',
     title: 'Echt geld beleggen',
@@ -49,7 +49,63 @@ Kopieer ze allebei en vul ze hieronder in.`,
   },
 ];
 
-export default function AlpacaSetup({ onComplete, onCancel }) {
+const liveSteps = [
+  {
+    key: 'intro',
+    title: 'Live gaan met echt geld',
+    content: `Je gaat nu beleggen met echt geld. De AI van FlowInvest handelt automatisch voor je — dezelfde strategie als bij paper trading, maar nu met je eigen geld.
+
+Belangrijk om te weten:
+• Je geld staat veilig bij Alpaca (verzekerd tot $500.000)
+• Je kunt altijd pauzeren via de pauze-knop
+• Je kunt altijd je geld opnemen via alpaca.markets
+• Beleggen brengt risico's met zich mee — je kunt geld verliezen`,
+  },
+  {
+    key: 'switch',
+    title: 'Stap 1: Switch naar Live op Alpaca',
+    content: `Je hebt al een Alpaca account. Nu moet je overschakelen naar Live Trading:
+
+1. Ga naar alpaca.markets en log in
+2. Klik linksboven waar "Paper Trading" staat
+3. Klik op "Live Trading"
+4. Als je dit nog niet eerder hebt gedaan, moet je je identiteit verifiëren (ID uploaden). Dit duurt 1-2 werkdagen.`,
+    link: 'https://app.alpaca.markets',
+    linkText: 'Ga naar Alpaca',
+  },
+  {
+    key: 'geld',
+    title: 'Stap 2: Stort geld op je account',
+    content: `Als je Live Trading actief is:
+
+1. Klik op "Transfers" in het menu
+2. Klik op "Deposit" (storten)
+3. Koppel je bankrekening (eenmalig)
+4. Kies het bedrag dat je wilt storten
+
+Het geld is meestal binnen 1-3 werkdagen beschikbaar. Je kunt beginnen zodra het er staat.
+
+Tip: start klein. Je kunt altijd later meer storten.`,
+    link: 'https://app.alpaca.markets/live/dashboard/overview',
+    linkText: 'Open Alpaca Live',
+  },
+  {
+    key: 'keys',
+    title: 'Stap 3: Maak Live API sleutels',
+    content: `Nu je op Live Trading staat:
+
+1. Klik op "API" in het linkermenu
+2. Zorg dat je op "Live" staat (niet Paper!)
+3. Klik op "Generate New Key"
+4. Kopieer de API Key en Secret Key
+
+Let op: Live keys zijn ANDERS dan Paper keys. Gebruik hier je Live keys.`,
+    showInputs: true,
+  },
+];
+
+export default function AlpacaSetup({ onComplete, onCancel, isLive = false, alreadyConnected = false }) {
+  const steps = isLive ? liveSteps : (alreadyConnected ? liveSteps : paperSteps);
   const [step, setStep] = useState(0);
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -67,7 +123,9 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
     setError('');
 
     try {
-      const res = await fetch('https://paper-api.alpaca.markets/v2/account', {
+      // Test tegen live OF paper endpoint
+      const baseUrl = isLive ? 'https://api.alpaca.markets/v2' : 'https://paper-api.alpaca.markets/v2';
+      const res = await fetch(`${baseUrl}/account`, {
         headers: {
           'APCA-API-KEY-ID': apiKey.trim(),
           'APCA-API-SECRET-KEY': secretKey.trim(),
@@ -75,16 +133,18 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
       });
 
       if (!res.ok) {
-        setError('Deze sleutels werken niet. Controleer of je ze goed hebt gekopieerd.');
+        setError(isLive
+          ? 'Deze sleutels werken niet voor Live Trading. Zorg dat je Live keys hebt (niet Paper).'
+          : 'Deze sleutels werken niet. Controleer of je ze goed hebt gekopieerd.');
         setTesting(false);
         return;
       }
 
       const data = await res.json();
       if (data.status === 'ACTIVE') {
-        onComplete({ apiKey: apiKey.trim(), secretKey: secretKey.trim() });
+        onComplete({ apiKey: apiKey.trim(), secretKey: secretKey.trim(), live: isLive });
       } else {
-        setError('Je Alpaca account is nog niet actief. Rond eerst de registratie af op alpaca.markets.');
+        setError('Je Alpaca account is nog niet actief. Rond eerst de verificatie af op alpaca.markets.');
       }
     } catch {
       setError('Kan geen verbinding maken. Probeer het later opnieuw.');
@@ -93,9 +153,7 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
   }
 
   function next() {
-    if (step < steps.length - 1) {
-      setStep(step + 1);
-    }
+    if (step < steps.length - 1) setStep(step + 1);
   }
 
   function back() {
@@ -104,7 +162,6 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
 
   return (
     <div className="alpaca-setup">
-      {/* Progress */}
       <div className="setup-progress">
         <div className="setup-progress-fill" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
       </div>
@@ -131,7 +188,7 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
         {current.showInputs && (
           <div className="setup-inputs">
             <label>
-              <span>API Key</span>
+              <span>{isLive ? 'Live API Key' : 'API Key'}</span>
               <input
                 type="text"
                 placeholder="PK..."
@@ -140,7 +197,7 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
               />
             </label>
             <label>
-              <span>Secret Key</span>
+              <span>{isLive ? 'Live Secret Key' : 'Secret Key'}</span>
               <input
                 type="password"
                 placeholder="Plak hier je secret key..."
@@ -156,11 +213,11 @@ export default function AlpacaSetup({ onComplete, onCancel }) {
       <div className="setup-footer">
         {current.showInputs ? (
           <button className="setup-btn" onClick={testConnection} disabled={testing || !apiKey || !secretKey}>
-            {testing ? 'Verbinding testen...' : 'Verbinden met Alpaca'}
+            {testing ? 'Verbinding testen...' : isLive ? 'Verbinden met Live Trading' : 'Verbinden met Alpaca'}
           </button>
         ) : (
           <button className="setup-btn" onClick={next}>
-            {step === 0 ? 'Hoe werkt het?' : 'Volgende'}
+            {step === 0 ? (isLive ? 'Aan de slag' : 'Hoe werkt het?') : 'Volgende'}
           </button>
         )}
         <button className="setup-cancel" onClick={onCancel}>
