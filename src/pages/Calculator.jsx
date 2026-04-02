@@ -6,7 +6,7 @@ const RISK_PROFILES = [
   { key: 'gebalanceerd', label: 'Gebalanceerd', rate: 0.087, desc: '60% aandelen / 40% obligaties', detail: 'Een mix van aandelen en obligaties. De obligaties dempen de schommelingen, de aandelen zorgen voor groei. Gemiddeld rendement over 97 jaar: 8.7% per jaar.' },
   { key: 'ambitieus', label: 'Ambitieus', rate: 0.10, desc: 'S&P 500 ETF', detail: 'Je belegt in de 500 grootste Amerikaanse bedrijven. Meer schommelingen, maar historisch het beste langetermijn rendement. Gemiddeld 10% per jaar over 97 jaar.' },
   { key: 'maximaal', label: 'Maximaal', rate: 0.125, desc: 'Losse aandelen + momentum', detail: 'De AI selecteert de sterkste individuele aandelen. Meer risico, maar potentieel hoger rendement. Conservatieve schatting: 12.5% per jaar.' },
-  { key: 'ai', label: 'FlowInvest AI', rate: 0.17, desc: 'Getest over 2016-2026', detail: 'Dit rendement is getest met de FlowInvest AI-strategie op echte marktdata van de afgelopen 10 jaar (2016-2026). Deze periode was uitzonderlijk goed door de tech- en AI-boom. Het werkelijke rendement kan lager uitvallen. Gebruik dit als optimistisch scenario.', highlight: true },
+  { key: 'ai', label: 'FlowInvest AI', rate: 0.17, desc: 'Maximaal beleggen — getest over 2016-2026', detail: 'Dit rendement van 17% per jaar is behaald met het Maximaal profiel (losse aandelen + momentum) via de FlowInvest AI-strategie. Getest op echte marktdata van de afgelopen 10 jaar (2016-2026). Deze periode was uitzonderlijk goed door de tech- en AI-boom. Het werkelijke rendement kan lager uitvallen. Gebruik dit als optimistisch scenario.', highlight: true },
 ];
 const INFLATION = 0.03;
 
