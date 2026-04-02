@@ -570,18 +570,10 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     recovery: '#2196F3',
   };
 
-  // Summary — paper trading gebruikt dezelfde berekening als simulatie
+  // Summary
   let summary;
-  if (liveTotals) {
-    summary = {
-      currentValue: liveTotals.totalValue,
-      gainLoss: liveTotals.totalGain,
-      gainLossPercent: liveTotals.totalGainPercent.toFixed(2),
-      isPositive: liveTotals.isPositive,
-      status: aiMessage?.message || 'Laden...',
-      currency: '€',
-    };
-  } else if (alpacaTradeResult?.action === 'waiting') {
+  // Bij live/paper: wacht-status heeft prioriteit
+  if (alpacaTradeResult?.action === 'waiting' && (brokerMode === 'live' || brokerMode === 'paper')) {
     summary = {
       currentValue: null,
       gainLoss: 0,
@@ -591,6 +583,15 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       currency: '€',
       loading: true,
       waiting: true,
+    };
+  } else if (liveTotals) {
+    summary = {
+      currentValue: liveTotals.totalValue,
+      gainLoss: liveTotals.totalGain,
+      gainLossPercent: liveTotals.totalGainPercent.toFixed(2),
+      isPositive: liveTotals.isPositive,
+      status: aiMessage?.message || 'Laden...',
+      currency: '€',
     };
   } else {
     summary = {
