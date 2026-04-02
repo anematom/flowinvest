@@ -91,6 +91,53 @@ function analyzeSignals(prices) {
     else if (mom < -0.5) { score -= 0.5; reasons.push(`Momentum ${mom.toFixed(2)}%`); }
   }
 
+  // === PATROONHERKENNING ===
+  if (prices.length >= 30) {
+    const r20 = prices.slice(-20);
+
+    // Double Bottom: twee vergelijkbare lows
+    const firstHalf = r20.slice(0, 10);
+    const secondHalf = r20.slice(10);
+    const low1 = Math.min(...firstHalf);
+    const low2 = Math.min(...secondHalf);
+    const midHigh = Math.max(...r20.slice(firstHalf.indexOf(low1), 10 + secondHalf.indexOf(low2)));
+    if (Math.abs(low1 - low2) / low1 < 0.015 && price > midHigh) {
+      score += 2; reasons.push('Double Bottom patroon');
+    }
+
+    // Head & Shoulders: drie pieken, middelste het hoogst
+    if (prices.length >= 40) {
+      const p1 = Math.max(...prices.slice(-40, -28));
+      const p2 = Math.max(...prices.slice(-28, -14));
+      const p3 = Math.max(...prices.slice(-14));
+      if (p2 > p1 * 1.01 && p2 > p3 * 1.01 && Math.abs(p1 - p3) / p1 < 0.02 && price < p3 * 0.98) {
+        score -= 2; reasons.push('Head & Shoulders patroon');
+      }
+    }
+
+    // Breakout: prijs breekt door 20-daags high
+    const high20 = Math.max(...prices.slice(-21, -1));
+    if (price > high20 * 1.005) {
+      score += 1.5; reasons.push('Breakout boven weerstand');
+    }
+
+    // Falling Wedge / Squeeze: range wordt smaller en breekt uit
+    if (prices.length >= 20) {
+      const rangeOld = Math.max(...prices.slice(-20, -10)) - Math.min(...prices.slice(-20, -10));
+      const rangeNew = Math.max(...prices.slice(-10)) - Math.min(...prices.slice(-10));
+      if (rangeNew < rangeOld * 0.6 && price > calcSMA(prices, 10)) {
+        score += 1; reasons.push('Squeeze breakout');
+      }
+    }
+
+    // Support bounce: prijs raakt 20-daags low en stijgt
+    const low20 = Math.min(...prices.slice(-21, -1));
+    const prevPrice = prices[prices.length - 2];
+    if (prevPrice <= low20 * 1.005 && price > prevPrice) {
+      score += 1.5; reasons.push('Bounce van support');
+    }
+  }
+
   let signal = 'hold';
   if (score >= 4) signal = 'strong_buy';
   else if (score >= 2) signal = 'buy';
