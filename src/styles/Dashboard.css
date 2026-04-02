@@ -54,7 +54,11 @@
   color: #78909C;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+}
+
+.portfolio-tab:hover {
+  border-color: #B0BEC5;
 }
 
 .portfolio-tab.active {
@@ -94,12 +98,24 @@
 
 /* Balance */
 .balance-card {
-  background: white;
   margin: 16px;
   padding: 32px 24px;
   border-radius: 20px;
   text-align: center;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.balance-card.balance-positive {
+  background: linear-gradient(135deg, #f0faf0 0%, #ffffff 100%);
+}
+
+.balance-card.balance-negative {
+  background: linear-gradient(135deg, #fef5f5 0%, #ffffff 100%);
+}
+
+.balance-card.balance-neutral {
+  background: white;
 }
 
 .balance-label {
@@ -109,7 +125,7 @@
 }
 
 .balance-amount {
-  font-size: 36px;
+  font-size: 42px;
   font-weight: 700;
   color: #263238;
   margin-bottom: 8px;
@@ -191,10 +207,17 @@
   font-weight: 500;
 }
 
+/* Section separator */
+.section-separator {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #E0E0E0, transparent);
+  margin: 24px 16px;
+}
+
 /* Chart */
 .chart-card {
   background: white;
-  margin: 16px;
+  margin: 24px 16px;
   padding: 20px;
   border-radius: 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
@@ -250,6 +273,21 @@
   color: #B0BEC5;
   font-size: 24px;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-block {
+  display: inline-block;
+  width: 180px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #E0E0E0 25%, #EEEEEE 50%, #E0E0E0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes pulse {
@@ -308,6 +346,12 @@
   flex-direction: column;
   gap: 4px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .info-card.clickable {
@@ -529,7 +573,7 @@
 
 /* Portfolio section */
 .portfolio-section {
-  margin: 16px;
+  margin: 24px 16px;
 }
 
 .allocation-chart {
@@ -553,13 +597,23 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   font-family: 'Inter', sans-serif;
   width: 100%;
 }
 
 .holding-card:hover {
   border-color: #A5D6A7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.holding-card.gain-positive {
+  border-left: 4px solid #4CAF50;
+}
+
+.holding-card.gain-negative {
+  border-left: 4px solid #F44336;
 }
 
 .holding-card.selected {
@@ -618,8 +672,8 @@
 .ai-status-bar {
   margin: 12px 16px;
   background: white;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 20px;
+  padding: 20px;
   border-left: 4px solid #4CAF50;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
@@ -1204,4 +1258,52 @@
 .tag-neutral {
   background: #F5F5F5;
   color: #78909C;
+}
+
+/* Performance section */
+.performance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 24px 16px;
+}
+
+.performance-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.performance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.perf-label {
+  font-size: 12px;
+  color: #90A4AE;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.perf-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.perf-value.positive {
+  color: #4CAF50;
+}
+
+.perf-value.negative {
+  color: #F44336;
+}
+
+.perf-detail {
+  font-size: 12px;
+  color: #B0BEC5;
 }

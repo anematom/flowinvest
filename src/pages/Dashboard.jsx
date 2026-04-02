@@ -611,13 +611,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
 
       {/* Balance card — toont Alpaca data in paper mode, anders simulatie */}
-      <div className="balance-card">
+      <div className={`balance-card ${summary.loading ? 'balance-neutral' : summary.isPositive ? 'balance-positive' : 'balance-negative'}`}>
         <p className="balance-label">Jouw vermogen</p>
         <span className={`dashboard-mode-badge ${brokerMode}`}>
           {brokerMode === 'paper' ? 'Paper Trading' : brokerMode === 'live' ? 'Live Trading' : 'Simulatie'}
         </span>
         {summary.loading ? (
-          <h1 className="balance-amount loading-text">Laden...</h1>
+          <div style={{ margin: '16px 0 8px' }}><span className="skeleton-block" /></div>
         ) : (
           <>
             <h1 className={`balance-amount ${priceFlash ? `flash-${priceFlash}` : ''}`}>
@@ -691,7 +691,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             {virtualPortfolio.map((holding, i) => (
               <button
                 key={holding.symbol}
-                className={`holding-card ${isUltraMode(settings.risk) ? 'ultra' : ''}`}
+                className={`holding-card ${isUltraMode(settings.risk) ? 'ultra' : ''} ${holding.gain >= 0 ? 'gain-positive' : 'gain-negative'}`}
               >
                 <div className="holding-left">
                   {isUltraMode(settings.risk) ? (
@@ -752,7 +752,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           </button>
         </div>
         <div className="chart-container">
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={250}>
             <LineChart data={chartData}>
               <XAxis
                 dataKey="date"
@@ -794,6 +794,51 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Section separator */}
+      <div className="section-separator" />
+
+      {/* Performance section */}
+      {virtualPortfolio && liveTotals && (() => {
+        const best = virtualPortfolio.reduce((a, b) => (a.gainPercent > b.gainPercent ? a : b), virtualPortfolio[0]);
+        const worst = virtualPortfolio.reduce((a, b) => (a.gainPercent < b.gainPercent ? a : b), virtualPortfolio[0]);
+        const avgDailyChange = virtualPortfolio.reduce((sum, h) => sum + (h.changePercent || 0), 0) / virtualPortfolio.length;
+        return (
+          <div className="performance-grid">
+            <div className="performance-card">
+              <div className="perf-label">Totaal rendement</div>
+              <div className={`perf-value ${liveTotals.totalGainPercent >= 0 ? 'positive' : 'negative'}`}>
+                {liveTotals.totalGainPercent >= 0 ? '+' : ''}{liveTotals.totalGainPercent.toFixed(2)}%
+              </div>
+              <div className="perf-detail">Sinds start</div>
+            </div>
+            <div className="performance-card">
+              <div className="perf-label">Beste aandeel</div>
+              <div className={`perf-value ${best.gainPercent >= 0 ? 'positive' : 'negative'}`}>
+                {best.gainPercent >= 0 ? '+' : ''}{best.gainPercent.toFixed(2)}%
+              </div>
+              <div className="perf-detail">{best.symbol}</div>
+            </div>
+            <div className="performance-card">
+              <div className="perf-label">Slechtste aandeel</div>
+              <div className={`perf-value ${worst.gainPercent >= 0 ? 'positive' : 'negative'}`}>
+                {worst.gainPercent >= 0 ? '+' : ''}{worst.gainPercent.toFixed(2)}%
+              </div>
+              <div className="perf-detail">{worst.symbol}</div>
+            </div>
+            <div className="performance-card">
+              <div className="perf-label">Dagverandering</div>
+              <div className={`perf-value ${avgDailyChange >= 0 ? 'positive' : 'negative'}`}>
+                {avgDailyChange >= 0 ? '+' : ''}{avgDailyChange.toFixed(2)}%
+              </div>
+              <div className="perf-detail">Gemiddeld vandaag</div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Section separator */}
+      <div className="section-separator" />
 
       {/* AI Activity Log */}
       {aiLog.length > 0 && (
