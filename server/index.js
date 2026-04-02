@@ -701,6 +701,9 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       return r.json();
     }
 
+    // 0. Annuleer openstaande orders om wash trade errors te voorkomen
+    try { await userAlpacaFetch('/orders', { method: 'DELETE' }); } catch {}
+
     // 1. Haal account info en huidige posities op
     const [account, positions, stockQuotes] = await Promise.all([
       userAlpacaFetch('/account'),
