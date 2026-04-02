@@ -6,6 +6,7 @@ import Assistant from './pages/Assistant';
 import Profile from './pages/Profile';
 import AlpacaSetup from './pages/AlpacaSetup';
 import DayTrade from './pages/DayTrade';
+import Calculator from './pages/Calculator';
 import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut, loadAlpacaKeys, saveAlpacaKeys } from './data/supabase';
 import './App.css';
 
@@ -205,6 +206,10 @@ function App() {
 
   if (!activePortfolio) {
     return <Onboarding onComplete={handleOnboardingComplete} portfolioName="Mijn portfolio" />;
+  }
+
+  if (page === 'calculator') {
+    return <Calculator onNavigate={handleNavigate} />;
   }
 
   if (page === 'daytrade') {

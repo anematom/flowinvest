@@ -139,6 +139,10 @@ export default function Assistant({ onNavigate, settings }) {
           <span className="nav-icon">📊</span>
           <span>Dashboard</span>
         </button>
+        <button className="nav-btn" onClick={() => onNavigate('calculator')}>
+          <span className="nav-icon">🔢</span>
+          <span>Calculator</span>
+        </button>
         <button className="nav-btn active" onClick={() => onNavigate('assistant')}>
           <span className="nav-icon">💬</span>
           <span>Assistent</span>

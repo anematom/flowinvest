@@ -1,0 +1,161 @@
+.calculator-page {
+  min-height: 100vh;
+  background: #F7F9F8;
+  padding: 32px 20px 120px;
+}
+
+.calculator-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.calculator-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #263238;
+  margin: 0;
+}
+
+.calculator-subtitle {
+  font-size: 14px;
+  color: #78909C;
+  margin: 6px 0 0;
+}
+
+/* Rendementsverwachting calculator */
+.calculator-page .calc-section {
+  padding: 20px !important;
+  margin-bottom: 24px;
+}
+
+.calculator-page .calc-inputs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.calculator-page .calc-inputs > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calculator-page .calc-inputs select,
+.calculator-page .calc-inputs input {
+  width: 100%;
+}
+
+.calculator-page .calc-scroll {
+  overflow-x: auto;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.calculator-page .calc-table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+}
+
+.calculator-page .calc-table th {
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  color: #78909C;
+  padding: 8px 10px;
+  border-bottom: 2px solid #E0E0E0;
+  white-space: nowrap;
+}
+
+.calculator-page .calc-table th:first-child {
+  text-align: left;
+}
+
+.calculator-page .calc-rate {
+  font-weight: 400;
+  font-size: 10px;
+  color: #B0BEC5;
+}
+
+.calculator-page .calc-table td {
+  font-size: 13px;
+  color: #263238;
+  padding: 8px 10px;
+  border-bottom: 1px solid #F0F0F0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.calculator-page .calc-table td:first-child {
+  text-align: left;
+}
+
+.calculator-page .calc-year {
+  font-weight: 700;
+  color: #78909C;
+}
+
+.calculator-page .calc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.calculator-page .calc-fv {
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.calculator-page .calc-fv.highlight {
+  color: #9C27B0;
+  font-weight: 700;
+}
+
+.calculator-page .calc-inflation {
+  font-weight: 600;
+  color: #FF9800;
+}
+
+.calculator-page .calc-legend {
+  margin-bottom: 12px;
+}
+
+.calculator-page .calc-legend-item {
+  font-size: 12px;
+  color: #546E7A;
+  padding: 3px 0;
+}
+
+.calculator-page .calc-disclaimer {
+  font-size: 11px;
+  color: #B0BEC5;
+  line-height: 1.5;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #F0F0F0;
+}
+
+/* Reuse profile-card and profile-label styles */
+.calculator-page .profile-card {
+  background: white;
+  border-radius: 16px;
+  padding: 4px 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+}
+
+.calculator-page .profile-label {
+  font-size: 14px;
+  color: #78909C;
+}
+
+.calculator-page .portfolio-name-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 2px solid #4CAF50;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+}
