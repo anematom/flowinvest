@@ -8,10 +8,11 @@ import {
 import '../styles/SettingsModal.css';
 
 // ========== Geldbeheer modal ==========
-export function MoneyModal({ settings, userId, portfolioId, onUpdate, onClose }) {
+export function MoneyModal({ settings, userId, portfolioId, brokerMode, onUpdate, onClose }) {
   const [amount, setAmount] = useState('');
   const [transactions, setTransactions] = useState([]);
   const [autoInvest, setAutoInvest] = useState({ enabled: false, amount: 100 });
+  const isLiveOrPaper = brokerMode === 'live' || brokerMode === 'paper';
   const [loadingTx, setLoadingTx] = useState(true);
 
   // Laad transacties en auto-invest uit Supabase
@@ -55,7 +56,12 @@ export function MoneyModal({ settings, userId, portfolioId, onUpdate, onClose })
   function handleDeposit() {
     const value = parseFloat(amount);
     if (!value || value <= 0) return;
-    const tx = { type: 'deposit', amount: value, label: 'Storting' };
+
+    if (brokerMode === 'live') {
+      if (!confirm(`Je gaat $${value} storten op je Alpaca Live account.\n\nDit bedrag wordt van je bankrekening afgeschreven via Alpaca.\n\nWil je doorgaan?`)) return;
+    }
+
+    const tx = { type: 'deposit', amount: value, label: isLiveOrPaper ? 'Storting (broker)' : 'Storting' };
     setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
     if (userId) dbAddTransaction(userId, tx, portfolioId);
     onUpdate({ ...settings, amount: settings.amount + value });
@@ -65,7 +71,12 @@ export function MoneyModal({ settings, userId, portfolioId, onUpdate, onClose })
   function handleWithdraw() {
     const value = parseFloat(amount);
     if (!value || value <= 0 || value > settings.amount) return;
-    const tx = { type: 'withdraw', amount: value, label: 'Opname' };
+
+    if (brokerMode === 'live') {
+      if (!confirm(`Je gaat $${value} opnemen van je Alpaca account.\n\nDit bedrag wordt teruggestort naar je bankrekening. Dit kan 1-3 werkdagen duren.\n\nWil je doorgaan?`)) return;
+    }
+
+    const tx = { type: 'withdraw', amount: value, label: isLiveOrPaper ? 'Opname (broker)' : 'Opname' };
     setTransactions(prev => [{ ...tx, date: new Date().toISOString() }, ...prev]);
     if (userId) dbAddTransaction(userId, tx, portfolioId);
     onUpdate({ ...settings, amount: settings.amount - value });
@@ -96,8 +107,14 @@ export function MoneyModal({ settings, userId, portfolioId, onUpdate, onClose })
 
         <div className="money-current">
           <span className="money-label">Huidige inleg</span>
-          <span className="money-value">&euro;{settings.amount.toLocaleString('nl-NL')}</span>
+          <span className="money-value">{isLiveOrPaper ? '$' : '€'}{settings.amount.toLocaleString('nl-NL')}</span>
         </div>
+
+        {brokerMode === 'live' && (
+          <div style={{ background: '#FFF3E0', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#E65100' }}>
+            Stortingen en opnames gaan via je Alpaca account. Zorg dat je bankrekening gekoppeld is op alpaca.markets.
+          </div>
+        )}
 
         <div className="money-input-row">
           <input

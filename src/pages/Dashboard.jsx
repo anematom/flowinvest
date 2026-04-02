@@ -974,6 +974,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           settings={settings}
           userId={user?.id}
           portfolioId={settings.id}
+          brokerMode={brokerMode}
           onUpdate={onUpdateSettings}
           onClose={() => setActiveModal(null)}
         />
