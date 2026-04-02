@@ -202,6 +202,44 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
         Wil je echt geld beleggen? Maak een nieuw portfolio aan en kies Paper Trading om eerst te oefenen met een echte broker.
       </p>
 
+      {/* Geavanceerde strategieën */}
+      <h2 className="profile-section-title">Geavanceerde strategieën</h2>
+      <div className="advanced-warning">
+        Deze strategieën zijn aanzienlijk risicovoller dan normaal beleggen. Je kunt je volledige inleg verliezen.
+      </div>
+      <div className="profile-card">
+        <div className="advanced-strategy">
+          <div className="advanced-strategy-left">
+            <span className="advanced-icon">₿</span>
+            <div>
+              <span className="advanced-title">Crypto Trading</span>
+              <span className="advanced-desc">Bitcoin, Ethereum en andere cryptovaluta. Hoge volatiliteit, 24/7 markt.</span>
+            </div>
+          </div>
+          <span className="advanced-badge coming">Binnenkort</span>
+        </div>
+        <div className="advanced-strategy">
+          <div className="advanced-strategy-left">
+            <span className="advanced-icon">⚡</span>
+            <div>
+              <span className="advanced-title">Opties</span>
+              <span className="advanced-desc">Hefboom op aandelen. Hoge winsten mogelijk, maar ook 100% verlies.</span>
+            </div>
+          </div>
+          <span className="advanced-badge coming">Binnenkort</span>
+        </div>
+        <div className="advanced-strategy">
+          <div className="advanced-strategy-left">
+            <span className="advanced-icon">⏱️</span>
+            <div>
+              <span className="advanced-title">Day Trading</span>
+              <span className="advanced-desc">Kopen en verkopen binnen één dag. Vereist ervaring — 92% verliest geld.</span>
+            </div>
+          </div>
+          <span className="advanced-badge coming">Binnenkort</span>
+        </div>
+      </div>
+
       <button className="logout-btn" onClick={onLogout}>
         Uitloggen
       </button>
