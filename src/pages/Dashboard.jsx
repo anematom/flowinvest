@@ -572,8 +572,8 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   // Summary
   let summary;
-  // Bij live/paper: wacht-status heeft prioriteit
-  if (alpacaTradeResult?.action === 'waiting' && (brokerMode === 'live' || brokerMode === 'paper')) {
+  // Alleen bij live trading: wacht-status als er geen geld op account staat
+  if (alpacaTradeResult?.action === 'waiting' && brokerMode === 'live') {
     summary = {
       currentValue: null,
       gainLoss: 0,
