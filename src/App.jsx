@@ -123,7 +123,14 @@ function App() {
   }
 
   function handleAddPortfolio(name, brokerMode, strategy) {
-    if ((brokerMode === 'paper' || brokerMode === 'live') && !alpacaKeys) {
+    // Paper trading: check of er keys zijn
+    if (brokerMode === 'paper' && !alpacaKeys) {
+      setOnboardingMode({ name, brokerMode, strategy });
+      setShowAlpacaSetup(true);
+      return;
+    }
+    // Live trading: ALTIJD setup flow tonen (live keys zijn apart van paper keys)
+    if (brokerMode === 'live') {
       setOnboardingMode({ name, brokerMode, strategy });
       setShowAlpacaSetup(true);
       return;
