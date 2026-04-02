@@ -79,13 +79,13 @@ describe('getMASignal', () => {
 });
 
 describe('checkTrailingStop', () => {
-  it('triggert als prijs 10% daalt vanaf top', () => {
-    expect(checkTrailingStop({ price: 90, highPrice: 100 })).toBe(true);
+  it('triggert als prijs 15% daalt vanaf top', () => {
     expect(checkTrailingStop({ price: 85, highPrice: 100 })).toBe(true);
+    expect(checkTrailingStop({ price: 80, highPrice: 100 })).toBe(true);
   });
 
-  it('triggert niet als prijs minder dan 10% daalt', () => {
-    expect(checkTrailingStop({ price: 95, highPrice: 100 })).toBe(false);
+  it('triggert niet als prijs minder dan 15% daalt', () => {
+    expect(checkTrailingStop({ price: 90, highPrice: 100 })).toBe(false);
     expect(checkTrailingStop({ price: 100, highPrice: 100 })).toBe(false);
   });
 });
@@ -130,7 +130,7 @@ describe('generateTradeActions', () => {
   });
 
   it('genereert trailing stop bij daling vanaf top', () => {
-    const holdings = [{ symbol: 'NVDA', gainPercent: 5, price: 88, highPrice: 100 }];
+    const holdings = [{ symbol: 'NVDA', gainPercent: 5, price: 84, highPrice: 100 }];
     const analyses = { NVDA: { action: 'hold', signals: [] } };
     const actions = generateTradeActions(holdings, analyses);
     const trailing = actions.find(a => a.action === 'TRAILING_STOP');

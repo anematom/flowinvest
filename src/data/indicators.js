@@ -114,7 +114,8 @@ export function analyzeStock(closes, currentPrice) {
 
 // Trailing stop-loss: beschermt winst door mee te schuiven met de hoogste waarde
 // highPrice = hoogste prijs sinds aankoop, trailingPercent = hoeveel % het mag dalen vanaf de top
-export function checkTrailingStop(holding, trailingPercent = 10) {
+// Geoptimaliseerd: 15% voor aandelen, 25% voor crypto (bron: backtest + research)
+export function checkTrailingStop(holding, trailingPercent = 15) {
   if (!holding.highPrice || !holding.price) return false;
   const dropFromHigh = ((holding.price - holding.highPrice) / holding.highPrice) * 100;
   return dropFromHigh <= -trailingPercent;
@@ -134,7 +135,9 @@ export function generateTradeActions(holdings, stockAnalyses) {
     if (!analysis) continue;
 
     // Trailing stop-loss: als prijs 10% daalt vanaf de hoogste waarde
-    if (holding.highPrice && checkTrailingStop(holding, 10)) {
+    // Trailing stop: 15% voor aandelen, 25% voor crypto
+    const trailingPct = holding.isCrypto ? 25 : 15;
+    if (holding.highPrice && checkTrailingStop(holding, trailingPct)) {
       const dropFromHigh = ((holding.price - holding.highPrice) / holding.highPrice * 100).toFixed(1);
       actions.push({
         symbol: holding.symbol,
