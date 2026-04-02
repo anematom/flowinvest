@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchStocks, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
+import { fetchPortfolio, fetchStocks, fetchCrypto, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
 import { loadPortfolioHoldings, savePortfolioHoldings } from '../data/supabase';
-import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
+import { buildPortfolio, buildUltraPortfolio, buildCryptoPortfolio, getPortfolioTotals, isUltraMode, isCryptoMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
   analyzeUltraMarket,
@@ -197,7 +197,68 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     if (!dbLoaded) return;
 
     try {
-      if (isUltraMode(settings.risk)) {
+      if (isCryptoMode(settings.risk)) {
+        // === CRYPTO MODUS ===
+        const cryptoQuotes = await fetchCrypto();
+
+        const validQuotes = cryptoQuotes.filter(q => q.price != null);
+        if (validQuotes.length < 2) return;
+        setMarketData(cryptoQuotes);
+
+        // Use same analysis as ultra but for crypto
+        const avgChange = validQuotes.reduce((sum, q) => sum + (q.changePercent || 0), 0) / validQuotes.length;
+        let mode = 'normal';
+        if (avgChange <= -10) mode = 'crisis';
+        else if (avgChange <= -5) mode = 'panic';
+        else if (avgChange <= -2) mode = 'defense';
+        else if (avgChange >= 3) mode = 'recovery';
+
+        setMarketAnalysis({ mode, avgChange, winners: validQuotes.filter(q => (q.changePercent || 0) > 0).length, losers: validQuotes.filter(q => (q.changePercent || 0) < 0).length });
+        setCurrentMode(mode);
+
+        let savedHoldings = dbHoldingsRef.current;
+        let portfolio;
+        if (savedHoldings && savedHoldings.length > 0) {
+          portfolio = savedHoldings.map(h => {
+            const quote = cryptoQuotes.find(q => q.symbol === h.symbol);
+            const currentPrice = quote?.price || h.buyPrice;
+            const currentValue = h.shares * currentPrice;
+            const gain = currentValue - h.invested;
+            const gainPercent = h.invested > 0 ? ((gain / h.invested) * 100) : 0;
+            return { ...h, price: currentPrice, currentValue, gain, gainPercent, changePercent: quote?.changePercent || 0 };
+          });
+        } else {
+          portfolio = buildCryptoPortfolio(settings.amount, cryptoQuotes);
+          const holdingsToSave = portfolio.map(h => ({
+            symbol: h.symbol, name: h.name, description: h.description,
+            weight: h.weight, rank: h.rank, shares: h.shares,
+            invested: h.invested, buyPrice: h.price, isCrypto: true,
+          }));
+          dbHoldingsRef.current = holdingsToSave;
+          if (portfolioId) {
+            savePortfolioHoldings(portfolioId, holdingsToSave, null).catch(() => {});
+          }
+        }
+
+        setVirtualPortfolio(portfolio);
+        const totals = getPortfolioTotals(portfolio, settings.amount);
+        setLiveTotals(totals);
+
+        const msg = avgChange >= 0
+          ? { type: 'good', title: 'Crypto markt stabiel', message: `Gemiddelde verandering: ${avgChange.toFixed(1)}%. Je crypto portfolio wordt actief beheerd.` }
+          : { type: 'caution', title: 'Crypto markt daalt', message: `Gemiddelde verandering: ${avgChange.toFixed(1)}%. Crypto is volatiel — schommelingen zijn normaal.` };
+        setAiMessage(msg);
+        setTrades([]);
+
+        const now = new Date();
+        setLastCheck(now);
+        setPortfolioHistory(prev => [...prev, {
+          date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          value: parseFloat(totals.totalValue.toFixed(2)),
+        }]);
+
+        if (portfolio) runTechnicalAnalysis(portfolio);
+      } else if (isUltraMode(settings.risk)) {
         // === ULTRA MODUS: Losse aandelen ===
         const stockQuotes = await fetchStocks();
 
@@ -649,7 +710,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       {virtualPortfolio && (
         <div className="portfolio-section">
           <h3 className="section-title">
-            {isUltraMode(settings.risk)
+            {isCryptoMode(settings.risk)
+              ? `Top 5 Crypto — €${settings.amount} belegd`
+              : isUltraMode(settings.risk)
               ? `Top 5 Aandelen — €${settings.amount} belegd`
               : `Jouw portfolio — €${settings.amount} verdeeld`
             }
@@ -660,7 +723,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             )}
           </h3>
 
-          {isUltraMode(settings.risk) && (
+          {isCryptoMode(settings.risk) && (
+            <div className="ultra-badge-bar">
+              <span className="ultra-badge" style={{ background: '#FF9800' }}>CRYPTO</span>
+              <span className="ultra-desc">AI selecteert de sterkste crypto</span>
+            </div>
+          )}
+          {!isCryptoMode(settings.risk) && isUltraMode(settings.risk) && (
             <div className="ultra-badge-bar">
               <span className="ultra-badge">MAXIMAAL</span>
               <span className="ultra-desc">AI selecteert de sterkste aandelen</span>
