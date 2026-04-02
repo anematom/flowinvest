@@ -156,3 +156,43 @@ export function getAllocationForRisk(riskLevel) {
 export function isUltraMode(riskLevel) {
   return riskLevel === 'ultra';
 }
+
+export function isCryptoMode(riskLevel) {
+  return riskLevel === 'crypto';
+}
+
+// Bouw crypto portfolio — top 5 crypto's op basis van prijs
+export function buildCryptoPortfolio(amount, cryptoQuotes) {
+  if (!cryptoQuotes || cryptoQuotes.length === 0) return [];
+
+  const valid = cryptoQuotes
+    .filter(q => q.price && q.price > 0)
+    .slice(0, 5);
+
+  if (valid.length === 0) return [];
+
+  const weights = [0.35, 0.25, 0.20, 0.12, 0.08];
+
+  return valid.map((coin, i) => {
+    const weight = weights[i] || 0.08;
+    const invested = amount * weight;
+    const shares = invested / coin.price;
+    const currentValue = shares * coin.price;
+
+    return {
+      symbol: coin.symbol,
+      name: coin.name,
+      description: coin.description,
+      weight,
+      rank: i + 1,
+      shares,
+      invested,
+      currentValue,
+      gain: 0,
+      gainPercent: 0,
+      price: coin.price,
+      changePercent: coin.changePercent || 0,
+      isCrypto: true,
+    };
+  });
+}

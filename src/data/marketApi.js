@@ -105,6 +105,12 @@ export async function fetchAlpacaOrders() {
   return res.json();
 }
 
+export async function fetchCrypto() {
+  const res = await fetch(`${API_BASE}/crypto`);
+  if (!res.ok) throw new Error('Failed to fetch crypto');
+  return res.json();
+}
+
 export async function fetchStockHistory(symbols, months = 3) {
   const query = symbols ? `?symbols=${symbols.join(',')}&months=${months}` : `?months=${months}`;
   const res = await fetch(`${API_BASE}/stocks/history${query}`);

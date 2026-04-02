@@ -140,6 +140,58 @@ app.get('/api/portfolio', async (req, res) => {
 });
 
 // ============================================
+// CRYPTO
+// ============================================
+const CRYPTO_COINS = [
+  { symbol: 'BTC/USD', name: 'Bitcoin', description: 'De eerste en grootste crypto' },
+  { symbol: 'ETH/USD', name: 'Ethereum', description: 'Smart contracts platform' },
+  { symbol: 'SOL/USD', name: 'Solana', description: 'Snelle blockchain' },
+  { symbol: 'DOGE/USD', name: 'Dogecoin', description: 'Meme coin' },
+  { symbol: 'AVAX/USD', name: 'Avalanche', description: 'DeFi platform' },
+  { symbol: 'LINK/USD', name: 'Chainlink', description: 'Oracle netwerk' },
+  { symbol: 'DOT/USD', name: 'Polkadot', description: 'Multi-chain protocol' },
+  { symbol: 'MATIC/USD', name: 'Polygon', description: 'Ethereum scaling' },
+  { symbol: 'ADA/USD', name: 'Cardano', description: 'Wetenschappelijke blockchain' },
+  { symbol: 'XRP/USD', name: 'Ripple', description: 'Betalingsnetwerk' },
+];
+
+// Crypto quotes via Alpaca
+app.get('/api/crypto', async (req, res) => {
+  try {
+    const quotes = await Promise.all(
+      CRYPTO_COINS.map(async (coin) => {
+        try {
+          const symbol = coin.symbol.replace('/', '%2F');
+          const r = await fetch(`https://data.alpaca.markets/v1beta3/crypto/us/latest/quotes?symbols=${symbol}`, {
+            headers: {
+              'APCA-API-KEY-ID': ALPACA_KEY || req.query.apiKey || '',
+              'APCA-API-SECRET-KEY': ALPACA_SECRET || req.query.secretKey || '',
+            },
+          });
+          if (!r.ok) return { ...coin, price: null, changePercent: null, error: true };
+          const data = await r.json();
+          const quote = data.quotes?.[coin.symbol];
+          if (!quote) return { ...coin, price: null, changePercent: null, error: true };
+
+          const price = (quote.ap + quote.bp) / 2; // midpoint
+          return {
+            ...coin,
+            price,
+            previousClose: price, // crypto heeft geen close, gebruiken we later
+            changePercent: 0,
+          };
+        } catch {
+          return { ...coin, price: null, changePercent: null, error: true };
+        }
+      })
+    );
+    res.json(quotes.filter(q => q.price != null));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // LOSSE AANDELEN — Momentum strategie
 // ============================================
 const MOMENTUM_STOCKS = [

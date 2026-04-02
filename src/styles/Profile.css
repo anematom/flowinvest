@@ -435,6 +435,26 @@
   color: #90A4AE;
 }
 
+.advanced-badge.crypto {
+  background: #FF9800;
+  color: white;
+}
+
+.advanced-strategy.clickable {
+  cursor: pointer;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #F0F0F0;
+  font-family: 'Inter', sans-serif;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.advanced-strategy.clickable:hover {
+  background: #FFF8E1;
+}
+
 .logout-btn {
   width: 100%;
   padding: 14px;

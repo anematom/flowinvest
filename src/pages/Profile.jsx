@@ -208,7 +208,11 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
         Deze strategieën zijn aanzienlijk risicovoller dan normaal beleggen. Je kunt je volledige inleg verliezen.
       </div>
       <div className="profile-card">
-        <div className="advanced-strategy">
+        <button className="advanced-strategy clickable" onClick={() => {
+          if (confirm('Let op: Crypto is zeer volatiel. Je kunt je volledige inleg verliezen.\n\nDe waarde kan binnen uren met 20% of meer dalen. Beleg alleen met geld dat je kunt missen.\n\nWil je doorgaan?')) {
+            onAddPortfolio('Crypto Portfolio', 'simulation');
+          }
+        }}>
           <div className="advanced-strategy-left">
             <span className="advanced-icon">₿</span>
             <div>
@@ -216,8 +220,8 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
               <span className="advanced-desc">Bitcoin, Ethereum en andere cryptovaluta. Hoge volatiliteit, 24/7 markt.</span>
             </div>
           </div>
-          <span className="advanced-badge coming">Binnenkort</span>
-        </div>
+          <span className="advanced-badge crypto">Start</span>
+        </button>
         <div className="advanced-strategy">
           <div className="advanced-strategy-left">
             <span className="advanced-icon">⚡</span>
