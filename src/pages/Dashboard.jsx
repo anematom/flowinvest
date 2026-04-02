@@ -19,8 +19,8 @@ import '../styles/Dashboard.css';
 
 const PIE_COLORS = ['#4CAF50', '#66BB6A', '#81C784', '#A5D6A7', '#C8E6C9'];
 const ULTRA_COLORS = ['#9C27B0', '#AB47BC', '#CE93D8', '#E1BEE7', '#F3E5F5'];
-const CHECK_INTERVAL = 60 * 1000;      // 1 minuut (was 10 min — snellere reactie)
-const PRICE_REFRESH = 15 * 1000;       // 15 seconden (was 30 sec)
+const CHECK_INTERVAL = 5 * 60 * 1000;  // 5 minuten (balans tussen snelheid en rate limits)
+const PRICE_REFRESH = 30 * 1000;       // 30 seconden
 
 export default function Dashboard({ settings, user, portfolios, activeIndex, brokerMode, alpacaKeys, onNavigate, onUpdateSettings, onSwitchPortfolio, onAddPortfolio, onDeletePortfolio }) {
   const [marketData, setMarketData] = useState(null);
