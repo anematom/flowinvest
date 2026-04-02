@@ -577,6 +577,18 @@
   color: #1565C0;
 }
 
+.status-card.status-waiting {
+  background: #FFF3E0;
+}
+
+.status-card.status-waiting .status-icon {
+  color: #FF9800;
+}
+
+.status-card.status-waiting .status-text {
+  color: #E65100;
+}
+
 /* Portfolio section */
 .portfolio-section {
   margin: 24px 16px;

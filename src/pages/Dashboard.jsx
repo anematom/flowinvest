@@ -581,9 +581,20 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       status: aiMessage?.message || 'Laden...',
       currency: '€',
     };
+  } else if (alpacaTradeResult?.action === 'waiting') {
+    summary = {
+      currentValue: null,
+      gainLoss: 0,
+      gainLossPercent: '0.00',
+      isPositive: true,
+      status: alpacaTradeResult.reason,
+      currency: '€',
+      loading: true,
+      waiting: true,
+    };
   } else {
     summary = {
-      currentValue: null, // null = nog aan het laden
+      currentValue: null,
       gainLoss: 0,
       gainLossPercent: '0.00',
       isPositive: true,
@@ -742,12 +753,14 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       </div>
 
       {/* Status message */}
-      <div className={`status-card ${!summary.isPositive ? 'status-neutral' : ''}`}>
-        <span className="status-icon">{summary.isPositive ? '✓' : 'ℹ'}</span>
+      <div className={`status-card ${summary.waiting ? 'status-waiting' : !summary.isPositive ? 'status-neutral' : ''}`}>
+        <span className="status-icon">{summary.waiting ? '⏳' : summary.isPositive ? '✓' : 'ℹ'}</span>
         <span className="status-text">
-          {!summary.loading && !summary.isPositive && liveTotals
-            ? `Je portfolio staat ${Math.abs(parseFloat(summary.gainLossPercent)).toFixed(1)}% onder je inleg. ${aiMessage?.message || 'De markt kan schommelen — dit is normaal.'}`
-            : summary.status}
+          {summary.waiting
+            ? summary.status
+            : !summary.loading && !summary.isPositive && liveTotals
+              ? `Je portfolio staat ${Math.abs(parseFloat(summary.gainLossPercent)).toFixed(1)}% onder je inleg. ${aiMessage?.message || 'De markt kan schommelen — dit is normaal.'}`
+              : summary.status}
         </span>
       </div>
 

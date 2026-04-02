@@ -699,6 +699,19 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       ),
     ]);
 
+    // Check of er geld beschikbaar is op het account
+    const accountCash = parseFloat(account.cash);
+    const accountEquity = parseFloat(account.equity);
+    if (isLive && accountCash < 1 && accountEquity < 1) {
+      return res.json({
+        action: 'waiting',
+        reason: 'Wachten op storting — er staat nog geen geld op je Alpaca account. Dit kan 1-3 werkdagen duren na je eerste storting.',
+        trades: [],
+        cash: accountCash,
+        equity: accountEquity,
+      });
+    }
+
     const validQuotes = stockQuotes.filter(q => q && q.price && q.changePercent != null);
     if (validQuotes.length < 3) {
       return res.json({ action: 'skip', reason: 'Te weinig betrouwbare koersdata' });
