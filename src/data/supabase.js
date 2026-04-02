@@ -177,7 +177,8 @@ export async function loadAlpacaKeys(userId) {
     .eq('user_id', userId)
     .single();
   if (error && error.code !== 'PGRST116') throw error;
-  return data;
+  if (!data) return null;
+  return { apiKey: data.api_key, secretKey: data.secret_key };
 }
 
 export async function saveAlpacaKeys(userId, apiKey, secretKey) {
