@@ -1,12 +1,12 @@
 .calculator-page {
   min-height: 100vh;
   background: #F7F9F8;
-  padding: 32px 20px 120px;
+  padding: 24px 20px 120px;
 }
 
 .calculator-header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .calculator-header h1 {
@@ -22,140 +22,235 @@
   margin: 6px 0 0;
 }
 
-/* Rendementsverwachting calculator */
-.calculator-page .calc-section {
-  padding: 20px !important;
-  margin-bottom: 24px;
-}
-
-.calculator-page .calc-inputs {
+/* Profiel selector */
+.calc-profile-selector {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.calculator-page .calc-inputs > div {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   gap: 6px;
-}
-
-.calculator-page .calc-inputs select,
-.calculator-page .calc-inputs input {
-  width: 100%;
-}
-
-.calculator-page .calc-scroll {
-  overflow-x: auto;
   margin-bottom: 16px;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
 }
 
-.calculator-page .calc-table {
-  width: 100%;
-  min-width: 600px;
-  border-collapse: collapse;
+.calc-profile-selector::-webkit-scrollbar {
+  display: none;
 }
 
-.calculator-page .calc-table th {
-  text-align: right;
-  font-size: 11px;
+.calc-profile-btn {
+  padding: 8px 14px;
+  border: 2px solid #E0E0E0;
+  border-radius: 20px;
+  background: white;
+  font-size: 12px;
   font-weight: 600;
+  font-family: 'Inter', sans-serif;
   color: #78909C;
-  padding: 8px 10px;
-  border-bottom: 2px solid #E0E0E0;
+  cursor: pointer;
   white-space: nowrap;
+  transition: all 0.2s;
 }
 
-.calculator-page .calc-table th:first-child {
-  text-align: left;
+.calc-profile-btn.active {
+  border-color: #4CAF50;
+  background: #E8F5E9;
+  color: #2E7D32;
 }
 
-.calculator-page .calc-rate {
-  font-weight: 400;
-  font-size: 10px;
-  color: #B0BEC5;
+.calc-profile-btn.highlight {
+  border-color: #E0E0E0;
 }
 
-.calculator-page .calc-table td {
-  font-size: 13px;
-  color: #263238;
-  padding: 8px 10px;
-  border-bottom: 1px solid #F0F0F0;
-  text-align: right;
-  white-space: nowrap;
+.calc-profile-btn.highlight.active {
+  border-color: #9C27B0;
+  background: #F3E5F5;
+  color: #7B1FA2;
 }
 
-.calculator-page .calc-table td:first-child {
-  text-align: left;
+/* Profiel info */
+.calc-profile-info {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  border-left: 4px solid #4CAF50;
 }
 
-.calculator-page .calc-year {
+.calc-profile-info.highlight {
+  border-left-color: #9C27B0;
+}
+
+.calc-profile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.calc-profile-name {
+  font-size: 18px;
   font-weight: 700;
-  color: #78909C;
+  color: #263238;
 }
 
-.calculator-page .calc-table tr:last-child td {
-  border-bottom: none;
-}
-
-.calculator-page .calc-fv {
-  font-weight: 600;
+.calc-profile-rate {
+  font-size: 16px;
+  font-weight: 700;
   color: #4CAF50;
 }
 
-.calculator-page .calc-fv.highlight {
+.calc-profile-info.highlight .calc-profile-rate {
   color: #9C27B0;
-  font-weight: 700;
 }
 
-.calculator-page .calc-inflation {
+.calc-profile-desc {
+  font-size: 14px;
+  font-weight: 600;
+  color: #546E7A;
+  margin: 0 0 6px;
+}
+
+.calc-profile-detail {
+  font-size: 13px;
+  color: #90A4AE;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Input */
+.calc-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.calc-input-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #78909C;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.calc-two-inputs {
+  display: flex;
+  gap: 16px;
+}
+
+.calc-two-inputs > div {
+  flex: 1;
+}
+
+.calc-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calc-currency {
+  font-size: 20px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.calc-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.calc-input:focus {
+  border-color: #4CAF50;
+}
+
+/* Tabel */
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.calc-table th {
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: #78909C;
+  padding: 10px 12px;
+  border-bottom: 2px solid #E0E0E0;
+}
+
+.calc-table th:first-child {
+  text-align: left;
+}
+
+.calc-table td {
+  font-size: 14px;
+  color: #263238;
+  padding: 12px;
+  border-bottom: 1px solid #F0F0F0;
+  text-align: right;
+}
+
+.calc-table td:first-child {
+  text-align: left;
+}
+
+.calc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.calc-year {
+  font-weight: 700;
+  color: #78909C;
+}
+
+.calc-fv {
+  font-weight: 700;
+  color: #4CAF50;
+}
+
+.calc-fv.highlight {
+  color: #9C27B0;
+}
+
+.calc-profit {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #A5D6A7;
+}
+
+.calc-inflation {
   font-weight: 600;
   color: #FF9800;
 }
 
-.calculator-page .calc-legend {
-  margin-bottom: 12px;
+/* Legend */
+.calc-legend {
+  padding: 16px !important;
 }
 
-.calculator-page .calc-legend-item {
-  font-size: 12px;
+.calc-legend-item {
+  font-size: 13px;
   color: #546E7A;
-  padding: 3px 0;
+  padding: 4px 0;
+  line-height: 1.4;
 }
 
-.calculator-page .calc-disclaimer {
+/* Disclaimer */
+.calc-disclaimer {
   font-size: 11px;
   color: #B0BEC5;
   line-height: 1.5;
   margin: 0;
-  padding-top: 12px;
-  border-top: 1px solid #F0F0F0;
-}
-
-/* Reuse profile-card and profile-label styles */
-.calculator-page .profile-card {
-  background: white;
-  border-radius: 16px;
-  padding: 4px 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  margin-bottom: 16px;
-}
-
-.calculator-page .profile-label {
-  font-size: 14px;
-  color: #78909C;
-}
-
-.calculator-page .portfolio-name-input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 2px solid #4CAF50;
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  outline: none;
-  box-sizing: border-box;
+  padding: 0 4px;
 }

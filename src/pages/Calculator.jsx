@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import '../styles/Calculator.css';
 
-// Historische rendementen (bronnen: S&P 500 1928-2025, NYU Stern, NerdWallet)
 const RISK_PROFILES = [
-  { label: 'Voorzichtig', rate: 0.066, desc: 'Obligaties + ETFs — historisch gemiddelde (97 jaar)' },
-  { label: 'Gebalanceerd', rate: 0.087, desc: '60% aandelen / 40% obligaties — historisch gemiddelde (97 jaar)' },
-  { label: 'Ambitieus', rate: 0.10, desc: 'S&P 500 ETF — historisch gemiddelde (97 jaar)' },
-  { label: 'Maximaal', rate: 0.125, desc: 'Losse aandelen + momentum — conservatieve schatting' },
-  { label: 'FlowInvest AI', rate: 0.17, desc: 'Getest met deze app over 2016-2026 (10 jaar) — ambitieus', highlight: true },
+  { key: 'voorzichtig', label: 'Voorzichtig', rate: 0.066, desc: 'Obligaties + ETFs', detail: 'Dit is het veiligste profiel. Je geld wordt gespreid over obligaties en ETFs. Gemiddeld rendement over 97 jaar: 6.6% per jaar. Minder schommelingen, maar ook minder rendement.' },
+  { key: 'gebalanceerd', label: 'Gebalanceerd', rate: 0.087, desc: '60% aandelen / 40% obligaties', detail: 'Een mix van aandelen en obligaties. De obligaties dempen de schommelingen, de aandelen zorgen voor groei. Gemiddeld rendement over 97 jaar: 8.7% per jaar.' },
+  { key: 'ambitieus', label: 'Ambitieus', rate: 0.10, desc: 'S&P 500 ETF', detail: 'Je belegt in de 500 grootste Amerikaanse bedrijven. Meer schommelingen, maar historisch het beste langetermijn rendement. Gemiddeld 10% per jaar over 97 jaar.' },
+  { key: 'maximaal', label: 'Maximaal', rate: 0.125, desc: 'Losse aandelen + momentum', detail: 'De AI selecteert de sterkste individuele aandelen. Meer risico, maar potentieel hoger rendement. Conservatieve schatting: 12.5% per jaar.' },
+  { key: 'ai', label: 'FlowInvest AI', rate: 0.17, desc: 'Getest over 2016-2026', detail: 'Dit rendement is getest met de FlowInvest AI-strategie op echte marktdata van de afgelopen 10 jaar (2016-2026). Deze periode was uitzonderlijk goed door de tech- en AI-boom. Het werkelijke rendement kan lager uitvallen. Gebruik dit als optimistisch scenario.', highlight: true },
 ];
-const INFLATION = 0.03; // 3% gemiddelde inflatie
+const INFLATION = 0.03;
 
 function calcFV(pmt, annualRate, years) {
   const r = annualRate / 12;
@@ -19,7 +18,22 @@ function calcFV(pmt, annualRate, years) {
 }
 
 export default function Calculator({ onNavigate }) {
+  const [startAmount, setStartAmount] = useState(1000);
   const [calcDeposit, setCalcDeposit] = useState(200);
+  const [selectedProfile, setSelectedProfile] = useState(2);
+
+  const profile = RISK_PROFILES[selectedProfile];
+  const afterInflationRate = profile.rate - INFLATION;
+
+  // FV met startbedrag + maandelijkse inleg
+  function calcTotal(annualRate, years) {
+    const r = annualRate / 12;
+    const n = years * 12;
+    if (r === 0) return startAmount + calcDeposit * n;
+    const fvStart = startAmount * Math.pow(1 + r, n);
+    const fvMonthly = calcDeposit * ((Math.pow(1 + r, n) - 1) / r);
+    return fvStart + fvMonthly;
+  }
 
   return (
     <div className="calculator-page">
@@ -28,69 +42,117 @@ export default function Calculator({ onNavigate }) {
         <p className="calculator-subtitle">Bereken wat je geld kan doen</p>
       </div>
 
-      <div className="profile-card calc-section">
-        <div className="calc-inputs">
-          <div>
-            <label className="profile-label">Maandelijkse inleg</label>
-            <input
-              type="number"
-              className="portfolio-name-input"
-              value={calcDeposit}
-              onChange={e => setCalcDeposit(Number(e.target.value))}
-              min={0}
-              step={50}
-            />
-          </div>
-        </div>
-
-        <div className="calc-scroll">
-          <table className="calc-table">
-            <thead>
-              <tr>
-                <th>Jaar</th>
-                <th>Niet belegd</th>
-                {RISK_PROFILES.map((p, i) => (
-                  <th key={i}>{p.label}<br/><span className="calc-rate">{(p.rate * 100).toFixed(1)}%/jr</span></th>
-                ))}
-                <th>Na inflatie<br/><span className="calc-rate">(beste - 3%)</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 3, 5, 10, 15, 20, 30].map(y => {
-                const deposited = calcDeposit * 12 * y;
-                const bestRate = RISK_PROFILES[RISK_PROFILES.length - 1].rate;
-                const afterInflation = calcFV(calcDeposit, bestRate - INFLATION, y);
-                return (
-                  <tr key={y}>
-                    <td className="calc-year">{y}</td>
-                    <td>€{deposited.toLocaleString('nl-NL')}</td>
-                    {RISK_PROFILES.map((p, i) => {
-                      const fv = calcFV(calcDeposit, p.rate, y);
-                      return <td key={i} className={`calc-fv${p.highlight ? ' highlight' : ''}`}>€{Math.round(fv).toLocaleString('nl-NL')}</td>;
-                    })}
-                    <td className="calc-inflation">€{Math.round(afterInflation).toLocaleString('nl-NL')}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="calc-legend">
-          {RISK_PROFILES.map((p, i) => (
-            <div key={i} className="calc-legend-item">
-              <strong>{p.label}</strong> ({(p.rate * 100).toFixed(1)}%) — {p.desc}
-            </div>
-          ))}
-          <div className="calc-legend-item">
-            <strong>Na inflatie</strong> — wat je echt kunt kopen met het geld (gecorrigeerd voor 3% jaarlijkse inflatie)
-          </div>
-        </div>
-
-        <p className="calc-disclaimer">
-          Rendementen zijn gebaseerd op historische data (S&P 500 sinds 1928, bron: NYU Stern). Gemiddeld rendement over 97 jaar. Het Maximaal profiel (12.5%) is gebaseerd op een conservatieve schatting. In onze eigen backtest behaalde de FlowInvest AI-strategie 17% per jaar over de afgelopen 10 jaar (2016-2026), maar deze periode was uitzonderlijk goed door de tech- en AI-boom. We rekenen bewust met een lager percentage. De toekomst is niet te voorspellen — je kunt ook geld verliezen. Dit is geen financieel advies.
-        </p>
+      {/* Profiel selectie */}
+      <div className="calc-profile-selector">
+        {RISK_PROFILES.map((p, i) => (
+          <button
+            key={i}
+            className={`calc-profile-btn ${i === selectedProfile ? 'active' : ''} ${p.highlight ? 'highlight' : ''}`}
+            onClick={() => setSelectedProfile(i)}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
+
+      {/* Uitleg van gekozen profiel */}
+      <div className={`calc-profile-info ${profile.highlight ? 'highlight' : ''}`}>
+        <div className="calc-profile-top">
+          <span className="calc-profile-name">{profile.label}</span>
+          <span className="calc-profile-rate">{(profile.rate * 100).toFixed(1)}% per jaar</span>
+        </div>
+        <p className="calc-profile-desc">{profile.desc}</p>
+        <p className="calc-profile-detail">{profile.detail}</p>
+      </div>
+
+      {/* Inleg */}
+      <div className="calc-card">
+        <div className="calc-two-inputs">
+          <div>
+            <label className="calc-input-label">Startinleg</label>
+            <div className="calc-input-row">
+              <span className="calc-currency">€</span>
+              <input
+                type="number"
+                className="calc-input"
+                value={startAmount}
+                onChange={e => setStartAmount(Number(e.target.value))}
+                min={0}
+                step={100}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="calc-input-label">Maandelijks erbij</label>
+            <div className="calc-input-row">
+              <span className="calc-currency">€</span>
+              <input
+                type="number"
+                className="calc-input"
+                value={calcDeposit}
+                onChange={e => setCalcDeposit(Number(e.target.value))}
+                min={0}
+                step={50}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Resultaten */}
+      <div className="calc-card">
+        <table className="calc-table">
+          <thead>
+            <tr>
+              <th>Jaar</th>
+              <th>Ingelegd</th>
+              <th>Verwacht</th>
+              <th>Na inflatie</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 3, 5, 10, 15, 20, 30].map(y => {
+              const deposited = startAmount + calcDeposit * 12 * y;
+              const fv = calcTotal(profile.rate, y);
+              const afterInfl = calcTotal(afterInflationRate, y);
+              const profit = fv - deposited;
+              return (
+                <tr key={y}>
+                  <td className="calc-year">{y} jaar</td>
+                  <td>€{deposited.toLocaleString('nl-NL')}</td>
+                  <td className={`calc-fv ${profile.highlight ? 'highlight' : ''}`}>
+                    €{Math.round(fv).toLocaleString('nl-NL')}
+                    <span className="calc-profit">+€{Math.round(profit).toLocaleString('nl-NL')}</span>
+                  </td>
+                  <td className="calc-inflation">€{Math.round(afterInfl).toLocaleString('nl-NL')}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Uitleg kolommen */}
+      <div className="calc-card calc-legend">
+        <div className="calc-legend-item">
+          <strong>Ingelegd</strong> — het totaal dat je zelf hebt gestort
+        </div>
+        <div className="calc-legend-item">
+          <strong>Verwacht</strong> — je verwachte vermogen op basis van {(profile.rate * 100).toFixed(1)}% rendement per jaar
+        </div>
+        <div className="calc-legend-item">
+          <strong>Na inflatie</strong> — wat je echt kunt kopen, gecorrigeerd voor 3% jaarlijkse inflatie
+        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <p className="calc-disclaimer">
+        {profile.highlight
+          ? 'Dit rendement (17%) is getest met de FlowInvest AI-strategie op echte marktdata van 2016-2026. Deze periode was uitzonderlijk goed. Het werkelijke rendement kan lager uitvallen.'
+          : `Rendement van ${(profile.rate * 100).toFixed(1)}% is gebaseerd op historische data (S&P 500 sinds 1928, bron: NYU Stern).`
+        }
+        {' '}De toekomst is niet te voorspellen — je kunt ook geld verliezen. Dit is geen financieel advies.
+      </p>
 
       {/* Bottom nav */}
       <div className="bottom-nav">
