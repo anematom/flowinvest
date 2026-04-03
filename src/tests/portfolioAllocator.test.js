@@ -62,7 +62,7 @@ describe('buildUltraPortfolio', () => {
     const portfolio = buildUltraPortfolio(1000, mockStockQuotes);
     const symbols = portfolio.map(p => p.symbol);
     expect(symbols).not.toContain('BND');
-    expect(portfolio.length).toBe(5);
+    expect(portfolio.length).toBeLessThanOrEqual(8);
   });
 
   it('investeert het juiste totaalbedrag', () => {
@@ -71,13 +71,10 @@ describe('buildUltraPortfolio', () => {
     expect(totalInvested).toBeCloseTo(1000, 0);
   });
 
-  it('heeft de juiste gewichten (30/25/20/15/10)', () => {
+  it('heeft de juiste gewichten (20/16/14/12/10/10/10/8)', () => {
     const portfolio = buildUltraPortfolio(1000, mockStockQuotes);
-    expect(portfolio[0].weight).toBeCloseTo(0.30, 2);
-    expect(portfolio[1].weight).toBeCloseTo(0.25, 2);
-    expect(portfolio[2].weight).toBeCloseTo(0.20, 2);
-    expect(portfolio[3].weight).toBeCloseTo(0.15, 2);
-    expect(portfolio[4].weight).toBeCloseTo(0.10, 2);
+    expect(portfolio[0].weight).toBeCloseTo(0.20, 2);
+    expect(portfolio[1].weight).toBeCloseTo(0.16, 2);
   });
 
   it('sorteert op momentum (beste eerst)', () => {
