@@ -606,19 +606,33 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
   // Summary
   let summary;
-  // Alleen bij live trading: wacht-status als er geen geld op account staat
-  if (alpacaTradeResult?.action === 'waiting' && brokerMode === 'live') {
+  // Live trading: Alpaca is de bron van waarheid
+  if (brokerMode === 'live' && alpacaTradeResult?.action === 'waiting') {
     summary = {
       currentValue: null,
       gainLoss: 0,
       gainLossPercent: '0.00',
       isPositive: true,
       status: alpacaTradeResult.reason,
-      currency: '€',
+      currency: '$',
       loading: true,
       waiting: true,
     };
+  } else if (brokerMode === 'live' && alpacaAccount) {
+    // Live: gebruik ECHTE getallen van Alpaca
+    const startAmount = settings.amount || 0;
+    const gain = alpacaAccount.equity - startAmount;
+    const gainPct = startAmount > 0 ? ((gain / startAmount) * 100) : 0;
+    summary = {
+      currentValue: alpacaAccount.equity,
+      gainLoss: gain,
+      gainLossPercent: gainPct.toFixed(2),
+      isPositive: gain >= 0,
+      status: aiMessage?.message || 'Live verbonden met Alpaca',
+      currency: '$',
+    };
   } else if (liveTotals) {
+    // Simulatie en paper: lokale berekening
     summary = {
       currentValue: liveTotals.totalValue,
       gainLoss: liveTotals.totalGain,
@@ -800,7 +814,34 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         </span>
       </div>
 
-      {virtualPortfolio && (
+      {/* Live trading: toon echte Alpaca posities */}
+      {brokerMode === 'live' && alpacaPositions.length > 0 && (
+        <div className="portfolio-section">
+          <h3 className="section-title">Jouw posities (live)</h3>
+          <div className="holdings-list">
+            {alpacaPositions.map((pos, i) => (
+              <div key={pos.symbol} className={`holding-card ${pos.unrealizedPL >= 0 ? 'gain-positive' : 'gain-negative'}`}>
+                <div className="holding-left">
+                  <div className="holding-rank">#{i + 1}</div>
+                  <div>
+                    <div className="holding-symbol">{pos.symbol}</div>
+                    <div className="holding-name">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
+                  </div>
+                </div>
+                <div className="holding-right">
+                  <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
+                  <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
+                    {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Simulatie/paper: toon lokale berekening */}
+      {brokerMode !== 'live' && virtualPortfolio && (
         <div className="portfolio-section">
           <h3 className="section-title">
             {isCryptoMode(settings.risk)
@@ -1091,6 +1132,37 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           {emergencyStopped && (
             <p className="emergency-info">Automatisch beleggen is gepauzeerd. Je beleggingen blijven gewoon staan.</p>
           )}
+        </div>
+      )}
+
+      {/* Herstel knop voor paper trading */}
+      {brokerMode === 'paper' && (
+        <div className="emergency-section">
+          <button className="reset-btn" style={{ width: '100%' }} onClick={async () => {
+            if (!confirm('Wil je de portfolio data herstellen van Alpaca?\n\nDit vervangt de lokale berekening met de echte data van je broker.')) return;
+            try {
+              const positions = await fetchAlpacaPositions(alpacaKeys, false);
+              if (positions.length > 0) {
+                const holdings = positions.map((pos, i) => ({
+                  symbol: pos.symbol, name: pos.symbol, shares: pos.qty,
+                  invested: pos.qty * pos.avgBuyPrice, buyPrice: pos.avgBuyPrice,
+                  highPrice: pos.avgBuyPrice, weight: 0.2, rank: i + 1,
+                }));
+                dbHoldingsRef.current = holdings;
+                if (settings.id) {
+                  await savePortfolioHoldings(settings.id, holdings, null);
+                }
+                alert('Holdings hersteld van Alpaca! Herlaad de pagina.');
+                window.location.reload();
+              } else {
+                alert('Geen posities gevonden bij Alpaca.');
+              }
+            } catch (err) {
+              alert('Herstel mislukt: ' + err.message);
+            }
+          }}>
+            Herstel data van Alpaca
+          </button>
         </div>
       )}
 
