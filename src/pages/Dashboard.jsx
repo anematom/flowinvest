@@ -854,7 +854,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             {isCryptoMode(settings.risk)
               ? `Top 5 Crypto — €${settings.amount} belegd`
               : isUltraMode(settings.risk)
-              ? `Top 5 Aandelen — €${settings.amount} belegd`
+              ? `Top 8 Aandelen — €${settings.amount} belegd`
               : `Jouw portfolio — €${settings.amount} verdeeld`
             }
             {currentMode !== 'normal' && (

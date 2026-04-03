@@ -65,19 +65,19 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   const stockAmount = amount * stockFraction;
   const bndAmount = amount * bndFraction;
 
-  // Top 5 aandelen op basis van dagelijks momentum (exclusief BND)
-  const top5 = stockQuotes
+  // Top 8 aandelen op basis van momentum (exclusief BND)
+  const top8 = stockQuotes
     .filter(q => q.price && q.changePercent != null && q.symbol !== 'BND')
     .sort((a, b) => b.changePercent - a.changePercent)
-    .slice(0, 5);
+    .slice(0, 8);
 
-  if (top5.length === 0) return [];
+  if (top8.length === 0) return [];
 
   // Verdeel aandelengeld: meer naar de sterkste performers
-  // #1 krijgt 30%, #2 25%, #3 20%, #4 15%, #5 10%
-  const weights = [0.30, 0.25, 0.20, 0.15, 0.10];
+  // #1-3 krijgen meer, #4-8 minder (geoptimaliseerd via backtest)
+  const weights = [0.20, 0.16, 0.14, 0.12, 0.10, 0.10, 0.10, 0.08];
 
-  const portfolio = top5.map((stock, i) => {
+  const portfolio = top8.map((stock, i) => {
     const stockWeight = weights[i] || 0.10;
     const invested = stockAmount * stockWeight;
     const shares = invested / stock.price;
