@@ -28,6 +28,10 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [alpacaPositions, setAlpacaPositions] = useState([]);
   const [alpacaTradeResult, setAlpacaTradeResult] = useState(null);
   const [emergencyStopped, setEmergencyStopped] = useState(false);
+  const [liveWarningDismissed, setLiveWarningDismissed] = useState(() => {
+    try { return localStorage.getItem('live_warning_dismissed_' + (settings.id || '')) === 'true'; }
+    catch { return false; }
+  });
   const [liveMode, setLiveMode] = useState(true);
   const [virtualPortfolio, setVirtualPortfolio] = useState(null);
   const [liveTotals, setLiveTotals] = useState(null);
@@ -691,13 +695,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
       {/* Live trading warning */}
       {brokerMode === 'live' && (
-        {!localStorage.getItem('live_warning_dismissed_' + settings.id) && (
+        {!liveWarningDismissed && (
           <div className="live-warning">
             <span className="live-warning-icon">&#9888;</span>
             <span>Je belegt met echt geld. Alle trades worden uitgevoerd op de beurs.</span>
-            <button className="live-warning-close" onClick={e => {
-              localStorage.setItem('live_warning_dismissed_' + settings.id, 'true');
-              e.target.closest('.live-warning').style.display='none';
+            <button className="live-warning-close" onClick={() => {
+              setLiveWarningDismissed(true);
+              try { localStorage.setItem('live_warning_dismissed_' + settings.id, 'true'); } catch {}
             }}>✕</button>
           </div>
         )}
