@@ -37,16 +37,11 @@
 /* Portfolio switcher */
 .portfolio-switcher {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   padding: 0 20px 12px;
   background: white;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.portfolio-switcher::-webkit-scrollbar {
-  display: none;
 }
 
 .portfolio-tab {
