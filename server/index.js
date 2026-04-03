@@ -55,6 +55,29 @@ async function finnhubFetch(endpoint) {
   return res.json();
 }
 
+// Helper: haal stock snapshots op via Alpaca (betrouwbaarder dan Finnhub)
+async function getAlpacaQuotes(symbols) {
+  const key = ALPACA_KEY || process.env.ALPACA_KEY;
+  const secret = ALPACA_SECRET || process.env.ALPACA_SECRET;
+  if (!key || !secret) return [];
+
+  const res = await fetch(`https://data.alpaca.markets/v2/stocks/snapshots?symbols=${symbols.join(',')}`, {
+    headers: { 'APCA-API-KEY-ID': key, 'APCA-API-SECRET-KEY': secret }
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+
+  return Object.entries(data).map(([symbol, snap]) => ({
+    symbol,
+    price: snap.dailyBar?.c || snap.latestTrade?.p || null,
+    change: snap.dailyBar && snap.prevDailyBar ? snap.dailyBar.c - snap.prevDailyBar.c : null,
+    changePercent: snap.dailyBar && snap.prevDailyBar ? ((snap.dailyBar.c - snap.prevDailyBar.c) / snap.prevDailyBar.c * 100) : null,
+    previousClose: snap.prevDailyBar?.c || null,
+    high: snap.dailyBar?.h || null,
+    low: snap.dailyBar?.l || null,
+  }));
+}
+
 // ============================================
 // ETF / Aandelen configuratie
 // ============================================
@@ -125,11 +148,26 @@ app.get('/api/history/:symbol', async (req, res) => {
   }
 });
 
-// Alle ETF quotes in één keer
+// Alle ETF quotes in één keer (Alpaca first, Finnhub fallback)
 app.get('/api/portfolio', async (req, res) => {
   try {
+    const symbols = DEFAULT_ETFS.map(e => e.symbol);
+    let alpacaQuotes = [];
+    try {
+      alpacaQuotes = await getAlpacaQuotes(symbols);
+    } catch {
+      // Alpaca mislukt, probeer Finnhub als fallback
+    }
+
+    const alpacaMap = Object.fromEntries(alpacaQuotes.map(q => [q.symbol, q]));
+
     const quotes = await Promise.all(
       DEFAULT_ETFS.map(async (etf) => {
+        // Gebruik Alpaca data als beschikbaar
+        if (alpacaMap[etf.symbol] && alpacaMap[etf.symbol].price != null) {
+          return { ...etf, ...alpacaMap[etf.symbol] };
+        }
+        // Fallback naar Finnhub
         try {
           const data = await finnhubFetch(`/quote?symbol=${etf.symbol}`);
           return {
@@ -309,11 +347,27 @@ const MOMENTUM_STOCKS = [
 
 // Haal quotes op voor alle momentum aandelen en sorteer op prestatie
 // Inclusief BND (obligaties) voor defensieve verschuiving in ultra modus
+// Alpaca first, Finnhub fallback
 app.get('/api/stocks', async (req, res) => {
   try {
     const allSymbols = [...MOMENTUM_STOCKS, { symbol: 'BND', name: 'Obligaties', description: 'Total Bond Market — veilige haven' }];
+    const symbols = allSymbols.map(s => s.symbol);
+    let alpacaQuotes = [];
+    try {
+      alpacaQuotes = await getAlpacaQuotes(symbols);
+    } catch {
+      // Alpaca mislukt, probeer Finnhub als fallback
+    }
+
+    const alpacaMap = Object.fromEntries(alpacaQuotes.map(q => [q.symbol, q]));
+
     const quotes = await Promise.all(
       allSymbols.map(async (stock) => {
+        // Gebruik Alpaca data als beschikbaar
+        if (alpacaMap[stock.symbol] && alpacaMap[stock.symbol].price != null) {
+          return { ...stock, ...alpacaMap[stock.symbol] };
+        }
+        // Fallback naar Finnhub
         try {
           const data = await finnhubFetch(`/quote?symbol=${stock.symbol}`);
           return {
