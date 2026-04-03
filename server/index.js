@@ -250,7 +250,7 @@ app.get('/api/sentiment/:symbol', async (req, res) => {
 // Bulk sentiment voor alle momentum aandelen
 app.get('/api/sentiment', async (req, res) => {
   try {
-    const symbols = MOMENTUM_STOCKS.map(s => s.symbol);
+    const symbols = MOMENTUM_POOL.map(s => s.symbol);
     const results = {};
     for (const sym of symbols.slice(0, 5)) { // Max 5 om rate limits te voorkomen
       try {
@@ -330,19 +330,33 @@ app.get('/api/crypto', async (req, res) => {
 });
 
 // ============================================
-// LOSSE AANDELEN — Momentum strategie
+// LOSSE AANDELEN — Globale momentum strategie
 // ============================================
-const MOMENTUM_STOCKS = [
-  { symbol: 'NVDA', name: 'NVIDIA', description: 'AI chips & GPU marktleider' },
-  { symbol: 'AAPL', name: 'Apple', description: 'Consumer tech gigant' },
-  { symbol: 'MSFT', name: 'Microsoft', description: 'Cloud & AI software' },
-  { symbol: 'GOOGL', name: 'Alphabet', description: 'Google — zoeken & cloud' },
-  { symbol: 'AMZN', name: 'Amazon', description: 'E-commerce & AWS cloud' },
-  { symbol: 'META', name: 'Meta', description: 'Social media & VR' },
-  { symbol: 'TSLA', name: 'Tesla', description: 'EV & energie' },
-  { symbol: 'AMD', name: 'AMD', description: 'Chips & processors' },
-  { symbol: 'AVGO', name: 'Broadcom', description: 'Semiconductors & infra' },
-  { symbol: 'CRM', name: 'Salesforce', description: 'Cloud CRM & AI' },
+// Globale momentum pool: US aandelen + regionale ETF's
+const MOMENTUM_POOL = [
+  // US Top Aandelen
+  { symbol: 'NVDA', name: 'NVIDIA', description: 'AI chips & GPU marktleider', region: 'US' },
+  { symbol: 'AAPL', name: 'Apple', description: 'Consumer tech gigant', region: 'US' },
+  { symbol: 'MSFT', name: 'Microsoft', description: 'Cloud & AI software', region: 'US' },
+  { symbol: 'GOOGL', name: 'Alphabet', description: 'Google — zoeken & cloud', region: 'US' },
+  { symbol: 'AMZN', name: 'Amazon', description: 'E-commerce & AWS cloud', region: 'US' },
+  { symbol: 'META', name: 'Meta', description: 'Social media & VR', region: 'US' },
+  { symbol: 'TSLA', name: 'Tesla', description: 'EV & energie', region: 'US' },
+  { symbol: 'AMD', name: 'AMD', description: 'Chips & processors', region: 'US' },
+  { symbol: 'AVGO', name: 'Broadcom', description: 'Semiconductors & infra', region: 'US' },
+  { symbol: 'CRM', name: 'Salesforce', description: 'Cloud CRM & AI', region: 'US' },
+  { symbol: 'NFLX', name: 'Netflix', description: 'Streaming entertainment', region: 'US' },
+  { symbol: 'ADBE', name: 'Adobe', description: 'Creatieve software', region: 'US' },
+  { symbol: 'ASML', name: 'ASML', description: 'Nederlandse chipmachines', region: 'EU' },
+  { symbol: 'LLY', name: 'Eli Lilly', description: 'Farma & healthcare', region: 'US' },
+  { symbol: 'V', name: 'Visa', description: 'Betalingsnetwerk', region: 'US' },
+  // Regionale ETF's
+  { symbol: 'VGK', name: 'Europa ETF', description: 'Europese aandelen', region: 'EU' },
+  { symbol: 'MCHI', name: 'China ETF', description: 'Chinese markt', region: 'China' },
+  { symbol: 'KWEB', name: 'China Internet', description: 'Alibaba, Tencent, JD', region: 'China' },
+  { symbol: 'VWO', name: 'Opkomende Markten', description: 'China, India, Brazilië', region: 'EM' },
+  { symbol: 'EWJ', name: 'Japan ETF', description: 'Japanse markt', region: 'Japan' },
+  { symbol: 'INDA', name: 'India ETF', description: 'Indiase markt', region: 'India' },
 ];
 
 // Haal quotes op voor alle momentum aandelen en sorteer op prestatie
@@ -350,7 +364,7 @@ const MOMENTUM_STOCKS = [
 // Alpaca first, Finnhub fallback
 app.get('/api/stocks', async (req, res) => {
   try {
-    const allSymbols = [...MOMENTUM_STOCKS, { symbol: 'BND', name: 'Obligaties', description: 'Total Bond Market — veilige haven' }];
+    const allSymbols = [...MOMENTUM_POOL, { symbol: 'BND', name: 'Obligaties', description: 'Total Bond Market — veilige haven' }];
     const symbols = allSymbols.map(s => s.symbol);
     let alpacaQuotes = [];
     try {
@@ -401,7 +415,7 @@ app.get('/api/stocks/top', async (req, res) => {
   try {
     const count = parseInt(req.query.count) || 5;
     const quotes = await Promise.all(
-      MOMENTUM_STOCKS.map(async (stock) => {
+      MOMENTUM_POOL.map(async (stock) => {
         try {
           const data = await finnhubFetch(`/quote?symbol=${stock.symbol}`);
           return {
@@ -429,7 +443,7 @@ app.get('/api/stocks/top', async (req, res) => {
 // Historische slotkoersen voor technische analyse
 app.get('/api/stocks/history', async (req, res) => {
   try {
-    const symbols = req.query.symbols ? req.query.symbols.split(',') : MOMENTUM_STOCKS.map(s => s.symbol);
+    const symbols = req.query.symbols ? req.query.symbols.split(',') : MOMENTUM_POOL.map(s => s.symbol);
     const months = parseInt(req.query.months) || 3;
     const to = Math.floor(Date.now() / 1000);
     const from = to - (months * 30 * 24 * 60 * 60);
@@ -759,18 +773,39 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     try { await userAlpacaFetch('/orders', { method: 'DELETE' }); } catch {}
 
     // 1. Haal account info en huidige posities op
-    const [account, positions, stockQuotes] = await Promise.all([
+    const [account, positions] = await Promise.all([
       userAlpacaFetch('/account'),
       userAlpacaFetch('/positions'),
-      Promise.all(
-        MOMENTUM_STOCKS.map(async (stock) => {
+    ]);
+
+    // Haal quotes op via Alpaca (bulk), fallback naar Finnhub per symbool
+    let stockQuotes = [];
+    try {
+      const alpacaQ = await getAlpacaQuotes(MOMENTUM_POOL.map(s => s.symbol));
+      const alpacaMap = Object.fromEntries(alpacaQ.map(q => [q.symbol, q]));
+      stockQuotes = MOMENTUM_POOL.map(stock => {
+        const q = alpacaMap[stock.symbol];
+        if (q && q.price != null) return { ...stock, ...q };
+        return null;
+      });
+    } catch {
+      // Alpaca mislukt — Finnhub fallback
+    }
+
+    // Vul ontbrekende quotes aan via Finnhub
+    const missing = MOMENTUM_POOL.filter((s, i) => !stockQuotes[i]);
+    if (missing.length > 0) {
+      const fallback = await Promise.all(
+        missing.map(async (stock) => {
           try {
             const data = await finnhubFetch(`/quote?symbol=${stock.symbol}`);
             return { ...stock, price: data.c, changePercent: data.dp, previousClose: data.pc };
           } catch { return null; }
         })
-      ),
-    ]);
+      );
+      let fi = 0;
+      stockQuotes = stockQuotes.map((q, i) => q || fallback[fi++] || null);
+    }
 
     // Check of er geld beschikbaar is op het account
     const accountCash = parseFloat(account.cash);
@@ -964,7 +999,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 // ============================================
 // DAY TRADING DEMO
 // ============================================
-const DAY_TRADE_SYMBOLS = ['NVDA', 'AMD', 'GOOGL', 'AAPL', 'TSLA'];
+const DAY_TRADE_SYMBOLS = MOMENTUM_POOL.slice(0, 10).map(s => s.symbol);
 let dayTradeInterval = null;
 let dayTradeActive = false;
 
