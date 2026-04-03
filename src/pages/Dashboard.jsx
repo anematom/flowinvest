@@ -694,8 +694,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       )}
 
       {/* Live trading warning */}
-      {brokerMode === 'live' && (
-        {!liveWarningDismissed && (
+      {brokerMode === 'live' && !liveWarningDismissed && (
           <div className="live-warning">
             <span className="live-warning-icon">&#9888;</span>
             <span>Je belegt met echt geld. Alle trades worden uitgevoerd op de beurs.</span>
@@ -704,7 +703,6 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
               try { localStorage.setItem('live_warning_dismissed_' + settings.id, 'true'); } catch {}
             }}>✕</button>
           </div>
-        )}
       )}
 
       {/* Smart AI Status Bar */}
