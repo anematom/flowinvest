@@ -76,9 +76,12 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   // Verdeel aandelengeld: meer naar de sterkste performers
   // #1-3 krijgen meer, #4-8 minder (geoptimaliseerd via backtest)
   const weights = [0.20, 0.16, 0.14, 0.12, 0.10, 0.10, 0.10, 0.08];
+  const usedWeights = weights.slice(0, top8.length);
+  const weightSum = usedWeights.reduce((a, b) => a + b, 0);
+  const normalizedWeights = usedWeights.map(w => w / weightSum);
 
   const portfolio = top8.map((stock, i) => {
-    const stockWeight = weights[i] || 0.10;
+    const stockWeight = normalizedWeights[i] || 0.10;
     const invested = stockAmount * stockWeight;
     const shares = invested / stock.price;
     const currentValue = shares * stock.price;
@@ -109,7 +112,7 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
     const bndQuote = stockQuotes.find(q => q.symbol === 'BND');
     const bndPrice = bndQuote?.price || 72; // fallback prijs
     const bndPrevClose = bndQuote?.previousClose || bndPrice;
-    const bndShares = bndAmount / bndPrevClose;
+    const bndShares = bndAmount / bndPrice;
     const bndValue = bndShares * bndPrice;
     const bndGain = bndValue - bndAmount;
 

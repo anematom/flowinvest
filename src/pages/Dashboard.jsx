@@ -200,14 +200,14 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         console.error('Auto-trade mislukt:', err);
       }
     }
-    runAutoTrade();
-    const tradeInterval = setInterval(runAutoTrade, 10 * 60 * 1000);
+    if (dbLoaded) runAutoTrade();
+    const tradeInterval = setInterval(() => { if (dbLoaded) runAutoTrade(); }, 10 * 60 * 1000);
 
     return () => {
       clearInterval(dataInterval);
       clearInterval(tradeInterval);
     };
-  }, [brokerMode, settings.risk]);
+  }, [brokerMode, settings.risk, settings.amount, portfolioId, dbLoaded]);
 
   const saveTimerRef = useRef(null);
   const dbHoldingsRef = useRef(null);
@@ -215,7 +215,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   function setPortfolioHistory(updater) {
     setPortfolioHistoryState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      const filtered = next.filter(s => s.value > 0 && s.value > settings.amount * 0.1);
+      const filtered = next.filter(s => s.value > 0);
       const limited = filtered.slice(-200);
 
       // Sla op naar Supabase (met debounce — max elke 30 sec)
@@ -508,8 +508,12 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           symbol: h.symbol, name: h.name, weight: h.weight,
           shares: h.shares, invested: h.invested, buyPrice: h.buyPrice || h.price, highPrice: h.highPrice || h.price,
         }));
+        const savedETFHoldings = dbHoldingsRef.current;
+        const holdingsChanged = !savedETFHoldings ||
+          savedETFHoldings.length !== etfHoldingsToSave.length ||
+          etfHoldingsToSave.some((h, i) => !savedETFHoldings[i] || savedETFHoldings[i].symbol !== h.symbol);
         dbHoldingsRef.current = etfHoldingsToSave;
-        if (portfolioId) {
+        if (portfolioId && holdingsChanged) {
           savePortfolioHoldings(portfolioId, etfHoldingsToSave, null).catch(() => {});
         }
 

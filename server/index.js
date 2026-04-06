@@ -312,11 +312,32 @@ app.get('/api/crypto', async (req, res) => {
           if (!quote) return { ...coin, price: null, changePercent: null, error: true };
 
           const price = (quote.ap + quote.bp) / 2; // midpoint
+
+          // Haal vorige dag slotkoers op voor echte change berekening
+          let previousClose = price;
+          let changePercent = 0;
+          try {
+            const barsRes = await fetch(`https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${symbol}&timeframe=1Day&limit=2`, {
+              headers: {
+                'APCA-API-KEY-ID': ALPACA_KEY || req.query.apiKey || '',
+                'APCA-API-SECRET-KEY': ALPACA_SECRET || req.query.secretKey || '',
+              },
+            });
+            if (barsRes.ok) {
+              const barsData = await barsRes.json();
+              const bars = barsData.bars?.[coin.symbol];
+              if (bars && bars.length >= 2) {
+                previousClose = bars[bars.length - 2].c;
+                changePercent = ((price - previousClose) / previousClose) * 100;
+              }
+            }
+          } catch {}
+
           return {
             ...coin,
             price,
-            previousClose: price, // crypto heeft geen close, gebruiken we later
-            changePercent: 0,
+            previousClose,
+            changePercent,
           };
         } catch {
           return { ...coin, price: null, changePercent: null, error: true };
@@ -539,11 +560,17 @@ app.get('/api/alpaca/positions', async (req, res) => {
 // Aandeel kopen
 app.post('/api/alpaca/buy', async (req, res) => {
   try {
-    const { symbol, amount } = req.body;
+    const { symbol, amount, apiKey, secretKey, live } = req.body;
     if (!symbol || !amount) return res.status(400).json({ error: 'symbol en amount zijn verplicht' });
 
-    const order = await alpacaFetch('/orders', {
+    const fetcher = makeAlpacaFetcher(apiKey, secretKey, live);
+    const base = live ? ALPACA_LIVE_BASE : ALPACA_BASE;
+    const key = apiKey || ALPACA_KEY;
+    const secret = secretKey || ALPACA_SECRET;
+
+    const r = await fetch(`${base}/orders`, {
       method: 'POST',
+      headers: { 'APCA-API-KEY-ID': key, 'APCA-API-SECRET-KEY': secret, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         symbol: symbol.toUpperCase(),
         notional: amount.toString(),
@@ -552,6 +579,8 @@ app.post('/api/alpaca/buy', async (req, res) => {
         time_in_force: 'day',
       }),
     });
+    if (!r.ok) { const err = await r.text(); throw new Error(`Alpaca error ${r.status}: ${err}`); }
+    const order = await r.json();
 
     res.json({
       id: order.id,
@@ -569,8 +598,12 @@ app.post('/api/alpaca/buy', async (req, res) => {
 // Aandeel verkopen
 app.post('/api/alpaca/sell', async (req, res) => {
   try {
-    const { symbol, qty } = req.body;
+    const { symbol, qty, apiKey, secretKey, live } = req.body;
     if (!symbol) return res.status(400).json({ error: 'symbol is verplicht' });
+
+    const base = live ? ALPACA_LIVE_BASE : ALPACA_BASE;
+    const key = apiKey || ALPACA_KEY;
+    const secret = secretKey || ALPACA_SECRET;
 
     const body = {
       symbol: symbol.toUpperCase(),
@@ -583,16 +616,20 @@ app.post('/api/alpaca/sell', async (req, res) => {
       body.qty = qty.toString();
     } else {
       // Verkoop alles
-      const positions = await alpacaFetch('/positions');
+      const fetcher = makeAlpacaFetcher(apiKey, secretKey, live);
+      const positions = await fetcher('/positions');
       const position = positions.find(p => p.symbol === symbol.toUpperCase());
       if (!position) return res.status(400).json({ error: `Geen positie in ${symbol}` });
       body.qty = position.qty;
     }
 
-    const order = await alpacaFetch('/orders', {
+    const r = await fetch(`${base}/orders`, {
       method: 'POST',
+      headers: { 'APCA-API-KEY-ID': key, 'APCA-API-SECRET-KEY': secret, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    if (!r.ok) { const err = await r.text(); throw new Error(`Alpaca error ${r.status}: ${err}`); }
+    const order = await r.json();
 
     res.json({
       id: order.id,
@@ -610,7 +647,8 @@ app.post('/api/alpaca/sell', async (req, res) => {
 // Order geschiedenis
 app.get('/api/alpaca/orders', async (req, res) => {
   try {
-    const orders = await alpacaFetch('/orders?status=all&limit=20');
+    const fetcher = makeAlpacaFetcher(req.query.apiKey, req.query.secretKey, req.query.live === 'true');
+    const orders = await fetcher('/orders?status=all&limit=20');
     res.json(orders.map(o => ({
       id: o.id,
       symbol: o.symbol,
@@ -663,7 +701,7 @@ app.post('/api/alpaca/emergency-stop', (req, res) => {
 
 app.post('/api/alpaca/emergency-resume', (req, res) => {
   emergencyStop = false;
-  orderCount = 0; // Reset order teller
+  Object.keys(orderCounts).forEach(k => delete orderCounts[k]); // Reset order tellers
   res.json({ status: 'resumed', message: 'Automatische trades hervat' });
 });
 
@@ -671,23 +709,25 @@ app.get('/api/alpaca/emergency-status', (req, res) => {
   res.json({ stopped: emergencyStop });
 });
 
-// Rate limiting — max 10 orders per uur
-let orderCount = 0;
-let orderCountReset = Date.now();
+// Rate limiting — max 10 orders per uur (per API key)
+const orderCounts = {}; // { apiKey: { count, reset } }
 const MAX_ORDERS_PER_HOUR = 10;
 
-function checkRateLimit() {
-  const now = Date.now();
-  if (now - orderCountReset > 60 * 60 * 1000) {
-    orderCount = 0;
-    orderCountReset = now;
+function checkRateLimit(apiKey) {
+  const key = apiKey || 'default';
+  if (!orderCounts[key]) orderCounts[key] = { count: 0, reset: Date.now() };
+  if (Date.now() - orderCounts[key].reset > 60 * 60 * 1000) {
+    orderCounts[key] = { count: 0, reset: Date.now() };
   }
-  if (orderCount >= MAX_ORDERS_PER_HOUR) {
+  if (orderCounts[key].count >= MAX_ORDERS_PER_HOUR) {
     return false;
   }
-  orderCount++;
+  orderCounts[key].count++;
   return true;
 }
+
+// High watermark tracker voor trailing stops (per user per symbol)
+const highWatermarks = {}; // { symbol_apiKey: highestPrice }
 
 // Audit log — alle trades worden vastgelegd
 const auditLog = [];
@@ -710,7 +750,7 @@ async function placeOrder(orderBody, reason) {
   if (emergencyStop) {
     return { skipped: true, reason: 'Noodstop actief' };
   }
-  if (!checkRateLimit()) {
+  if (!checkRateLimit(ALPACA_KEY)) {
     return { skipped: true, reason: 'Max orders per uur bereikt' };
   }
   const result = await alpacaFetch('/orders', {
@@ -770,6 +810,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     }
 
     // 0. Annuleer openstaande orders om wash trade errors te voorkomen
+    console.log('Auto-trade: cancelling open orders before new cycle');
     try { await userAlpacaFetch('/orders', { method: 'DELETE' }); } catch {}
 
     // 1. Haal account info en huidige posities op
@@ -852,7 +893,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     // User-specifieke placeOrder
     async function userPlaceOrder(orderBody, reason) {
       if (emergencyStop) return { skipped: true, reason: 'Noodstop actief' };
-      if (!checkRateLimit()) return { skipped: true, reason: 'Max orders per uur bereikt' };
+      if (!checkRateLimit(useKey)) return { skipped: true, reason: 'Max orders per uur bereikt' };
       const result = await userAlpacaFetch('/orders', {
         method: 'POST',
         body: JSON.stringify(orderBody),
@@ -875,12 +916,25 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       const symbol = pos.symbol;
       const currentPrice = parseFloat(pos.current_price);
       const entryPrice = parseFloat(pos.avg_entry_price);
-      const highPrice = parseFloat(pos.current_price); // Alpaca geeft geen high since entry, we gebruiken unrealized P/L
-
-      // Trailing stop-loss: als winst > 10% was maar nu 10% gedaald van top
-      // Vereenvoudigd: als P/L positief was (>5%) maar nu snel daalt
       const costBasis = parseFloat(pos.cost_basis);
       const marketValue = parseFloat(pos.market_value);
+
+      // Update high watermark for trailing stop
+      const key = symbol + '_' + useKey;
+      if (!highWatermarks[key] || currentPrice > highWatermarks[key]) highWatermarks[key] = currentPrice;
+      const dropFromHigh = ((currentPrice - highWatermarks[key]) / highWatermarks[key]) * 100;
+
+      // Trailing stop: if price dropped 15% from high watermark while still in profit
+      if (dropFromHigh <= -15 && plPercent > 0) {
+        try {
+          const result = await userPlaceOrder(
+            { symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
+            `Trailing stop: ${dropFromHigh.toFixed(1)}% daling vanaf top, winst beschermd`
+          );
+          if (!result.skipped) trades.push({ symbol, action: 'TRAILING_STOP', reason: `${dropFromHigh.toFixed(1)}% daling vanaf top`, amount: pos.qty });
+        } catch (e) { console.error('Trailing stop fout:', e.message); }
+        continue;
+      }
 
       // Vaste stop-loss
       if (plPercent <= TRADE_THRESHOLDS.stopLoss) {
