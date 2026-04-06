@@ -114,16 +114,52 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     setPortfolioHistoryState([]);
     prevValueRef.current = null;
 
-    // Laad uit Supabase
+    // Laad uit Supabase, en bij paper/live: sync met Alpaca
     dbHoldingsRef.current = null;
     if (portfolioId) {
-      loadPortfolioHoldings(portfolioId).then(data => {
+      loadPortfolioHoldings(portfolioId).then(async (data) => {
         if (data) {
           if (data.history && data.history.length > 0 && !cached) {
             setPortfolioHistoryState(data.history);
           }
           if (data.holdings && data.holdings.length > 0) {
             dbHoldingsRef.current = data.holdings;
+          }
+        }
+
+        // Bij paper/live: check Alpaca posities als bron van waarheid
+        if ((brokerMode === 'paper' || brokerMode === 'live') && alpacaKeys) {
+          try {
+            const positions = await fetchAlpacaPositions(alpacaKeys, brokerMode === 'live');
+            if (positions && positions.length > 0) {
+              // Alpaca heeft posities — gebruik die als basis
+              const alpacaHoldings = positions.map((pos, i) => ({
+                symbol: pos.symbol,
+                name: pos.symbol,
+                shares: pos.qty,
+                invested: pos.qty * pos.avgBuyPrice,
+                buyPrice: pos.avgBuyPrice,
+                highPrice: pos.avgBuyPrice,
+                weight: 1 / positions.length,
+                rank: i + 1,
+              }));
+
+              // Merge: bewaar extra info uit Supabase (name, description) maar gebruik Alpaca prijzen
+              const merged = alpacaHoldings.map(ah => {
+                const existing = dbHoldingsRef.current?.find(h => h.symbol === ah.symbol);
+                return {
+                  ...ah,
+                  name: existing?.name || ah.name,
+                  description: existing?.description || '',
+                  highPrice: existing?.highPrice || ah.buyPrice,
+                };
+              });
+
+              dbHoldingsRef.current = merged;
+              console.log('[Load] Holdings gesynchroniseerd met Alpaca:', merged.length, 'posities');
+            }
+          } catch (err) {
+            console.log('[Load] Alpaca sync mislukt, gebruik Supabase data:', err.message);
           }
         }
         setDbLoaded(true);
@@ -322,7 +358,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         let savedHoldings = dbHoldingsRef.current;
         console.log('[SmartCheck] savedHoldings:', savedHoldings ? savedHoldings.length + ' items' : 'null', 'dbLoaded:', dbLoaded);
 
-        // BEVEILIGING: als ref leeg is, probeer nogmaals uit Supabase te laden
+        // BEVEILIGING: als ref leeg is, probeer uit Supabase en dan Alpaca
         if (!savedHoldings && portfolioId) {
           try {
             const dbData = await loadPortfolioHoldings(portfolioId);
@@ -332,8 +368,23 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             }
           } catch {}
         }
+        // Als Supabase ook leeg is en we hebben Alpaca: gebruik broker data
+        if (!savedHoldings && (brokerMode === 'paper' || brokerMode === 'live') && alpacaKeys) {
+          try {
+            const positions = await fetchAlpacaPositions(alpacaKeys, brokerMode === 'live');
+            if (positions && positions.length > 0) {
+              savedHoldings = positions.map((pos, i) => ({
+                symbol: pos.symbol, name: pos.symbol, shares: pos.qty,
+                invested: pos.qty * pos.avgBuyPrice, buyPrice: pos.avgBuyPrice,
+                highPrice: pos.avgBuyPrice, weight: 1 / positions.length, rank: i + 1,
+              }));
+              dbHoldingsRef.current = savedHoldings;
+              console.log('[SmartCheck] Holdings hersteld van Alpaca:', savedHoldings.length);
+            }
+          } catch {}
+        }
 
-        // Altijd nieuw portfolio bouwen met huidige top 5
+        // Bouw portfolio met huidige top 8
         const freshPortfolio = buildUltraPortfolio(settings.amount, stockQuotes, analysis.defensiveShift);
 
         let portfolio;
