@@ -318,8 +318,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         setMarketAnalysis(analysis);
         setCurrentMode(analysis.mode);
 
-        // 2. Bouw portfolio met huidige top 5 — roteer als nodig
+        // 2. Bouw portfolio met huidige top 8 — roteer als nodig
         let savedHoldings = dbHoldingsRef.current;
+        console.log('[SmartCheck] savedHoldings:', savedHoldings ? savedHoldings.length + ' items' : 'null', 'dbLoaded:', dbLoaded);
 
         // BEVEILIGING: als ref leeg is, probeer nogmaals uit Supabase te laden
         if (!savedHoldings && portfolioId) {
@@ -355,14 +356,18 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           portfolio = freshPortfolio;
         }
 
-        // Sla holdings op naar Supabase
+        // Sla holdings op naar Supabase (alleen als ze gewijzigd zijn)
         const holdingsToSave = portfolio.map(h => ({
           symbol: h.symbol, name: h.name, description: h.description,
           weight: h.weight, rank: h.rank, shares: h.shares,
           invested: h.invested, buyPrice: h.buyPrice || h.price, highPrice: h.highPrice || h.price, isDefensive: h.isDefensive || false,
         }));
+        const holdingsChanged = !savedHoldings ||
+          savedHoldings.length !== holdingsToSave.length ||
+          holdingsToSave.some((h, i) => !savedHoldings[i] || savedHoldings[i].symbol !== h.symbol);
         dbHoldingsRef.current = holdingsToSave;
-        if (portfolioId) {
+        if (portfolioId && holdingsChanged) {
+          console.log('[SmartCheck] Holdings gewijzigd, opslaan naar Supabase');
           savePortfolioHoldings(portfolioId, holdingsToSave, null).catch(() => {});
         }
         setVirtualPortfolio(portfolio);
