@@ -944,13 +944,16 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       return result;
     }
 
-    // 4. Top 5 aandelen op basis van momentum
-    const top5 = validQuotes
+    // 4. Top 8 aandelen op basis van momentum (zelfde als simulatie)
+    const top8 = validQuotes
       .sort((a, b) => b.changePercent - a.changePercent)
-      .slice(0, 5);
+      .slice(0, 8);
 
     const trades = [];
-    const weights = [0.30, 0.25, 0.20, 0.15, 0.10];
+    const rawWeights = [0.20, 0.16, 0.14, 0.12, 0.10, 0.10, 0.10, 0.08];
+    const usedWeights = rawWeights.slice(0, top8.length);
+    const weightSum = usedWeights.reduce((a, b) => a + b, 0);
+    const weights = usedWeights.map(w => w / weightSum);
 
     // 5. Check trailing stop-loss en vaste stop-loss
     for (const pos of positions) {
@@ -1011,8 +1014,8 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     if (cash > 10 && remainingBudget > 1) {
       const stockBudget = Math.min(cash, remainingBudget, targetStockValue) * 0.95;
 
-      for (let i = 0; i < top5.length; i++) {
-        const stock = top5[i];
+      for (let i = 0; i < top8.length; i++) {
+        const stock = top8[i];
         const buyAmount = stockBudget * weights[i];
         if (buyAmount < 1) continue;
 
@@ -1051,9 +1054,9 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 
     // 8. Verkoop aandelen die niet meer in top 5 zitten
     if (mode === 'normal' || mode === 'recovery') {
-      const top5Symbols = top5.map(s => s.symbol);
+      const top8Symbols = top8.map(s => s.symbol);
       for (const pos of positions) {
-        if (pos.symbol !== 'BND' && !top5Symbols.includes(pos.symbol)) {
+        if (pos.symbol !== 'BND' && !top8Symbols.includes(pos.symbol)) {
           try {
             const result = await userPlaceOrder(
               { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
@@ -1082,7 +1085,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       avgChange: avgChange.toFixed(2),
       stockFraction: Math.round(stockFraction * 100),
       bondFraction: Math.round(bondFraction * 100),
-      top5: top5.map(s => s.symbol),
+      top8Symbols: top8.map(s => s.symbol),
       trades,
       equity,
       cash,
