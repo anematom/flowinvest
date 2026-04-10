@@ -133,12 +133,11 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
           }
         }
 
-        // Bij paper/live: check Alpaca posities als bron van waarheid
-        if ((brokerMode === 'paper' || brokerMode === 'live') && alpacaKeys) {
+        // Bij paper/live: check Alpaca posities — alleen als Supabase LEEG is
+        if ((brokerMode === 'paper' || brokerMode === 'live') && alpacaKeys && !dbHoldingsRef.current) {
           try {
             const positions = await fetchAlpacaPositions(alpacaKeys, brokerMode === 'live');
             if (positions && positions.length > 0) {
-              // Alpaca heeft posities — gebruik die als basis
               const alpacaHoldings = positions.map((pos, i) => ({
                 symbol: pos.symbol,
                 name: pos.symbol,
@@ -150,22 +149,11 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
                 rank: i + 1,
               }));
 
-              // Merge: bewaar extra info uit Supabase (name, description) maar gebruik Alpaca prijzen
-              const merged = alpacaHoldings.map(ah => {
-                const existing = dbHoldingsRef.current?.find(h => h.symbol === ah.symbol);
-                return {
-                  ...ah,
-                  name: existing?.name || ah.name,
-                  description: existing?.description || '',
-                  highPrice: existing?.highPrice || ah.buyPrice,
-                };
-              });
-
-              dbHoldingsRef.current = merged;
-              console.log('[Load] Holdings gesynchroniseerd met Alpaca:', merged.length, 'posities');
+              dbHoldingsRef.current = alpacaHoldings;
+              console.log('[Load] Holdings hersteld van Alpaca (Supabase was leeg):', alpacaHoldings.length, 'posities');
             }
           } catch (err) {
-            console.log('[Load] Alpaca sync mislukt, gebruik Supabase data:', err.message);
+            console.log('[Load] Alpaca fallback mislukt:', err.message);
           }
         }
         setDbLoaded(true);
