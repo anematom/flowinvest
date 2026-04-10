@@ -1008,18 +1008,38 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       }
     }
 
-    // 6. Koop top 5 aandelen als er cash is en budget niet overschreden
-    const alreadyInvested = currentPositionValue;
-    const remainingBudget = Math.max(0, availableBudget - alreadyInvested);
-    if (cash > 10 && remainingBudget > 1) {
-      const stockBudget = Math.min(cash, remainingBudget, targetStockValue) * 0.95;
+    // 6. Herbalanceer: verkoop posities die niet in top 8 zitten EERST
+    const top8Syms = top8.map(s => s.symbol);
+    for (const pos of positions) {
+      if (pos.symbol !== 'BND' && !top8Syms.includes(pos.symbol)) {
+        try {
+          const result = await userPlaceOrder(
+            { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
+            'Herbalancering: niet meer in top 8'
+          );
+          if (!result.skipped) trades.push({ symbol: pos.symbol, action: 'ROTATIE', reason: 'Niet meer in top 8', amount: pos.qty });
+        } catch (e) { console.error('Rotatie fout:', e.message); }
+      }
+    }
+
+    // 7. Koop top 8 aandelen — gebruik beschikbaar budget
+    // Herbereken cash na rotatie verkopen
+    const updatedAccount = await userAlpacaFetch('/account').catch(() => account);
+    const updatedCash = parseFloat(updatedAccount.cash || cash);
+    const updatedPositions = await userAlpacaFetch('/positions').catch(() => positions);
+    const updatedPositionValue = updatedPositions.reduce((sum, p) => sum + parseFloat(p.market_value), 0);
+    const totalBudget = amount ? parseFloat(amount) : parseFloat(updatedAccount.equity || equity);
+    const remainingBudget = Math.max(0, totalBudget - updatedPositionValue);
+
+    if (updatedCash > 10 && remainingBudget > 1) {
+      const stockBudget = Math.min(updatedCash, remainingBudget, targetStockValue) * 0.95;
 
       for (let i = 0; i < top8.length; i++) {
         const stock = top8[i];
         const buyAmount = stockBudget * weights[i];
         if (buyAmount < 1) continue;
 
-        const existing = positions.find(p => p.symbol === stock.symbol);
+        const existing = updatedPositions.find(p => p.symbol === stock.symbol);
         const existingValue = existing ? parseFloat(existing.market_value) : 0;
         const targetValue = targetStockValue * weights[i];
 
@@ -1052,21 +1072,8 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       }
     }
 
-    // 8. Verkoop aandelen die niet meer in top 5 zitten
+    // 8. Verkoop BND bij herstel
     if (mode === 'normal' || mode === 'recovery') {
-      const top8Symbols = top8.map(s => s.symbol);
-      for (const pos of positions) {
-        if (pos.symbol !== 'BND' && !top8Symbols.includes(pos.symbol)) {
-          try {
-            const result = await userPlaceOrder(
-              { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
-              'Niet meer in top 5'
-            );
-            if (!result.skipped) trades.push({ symbol: pos.symbol, action: 'ROTATIE', reason: 'Niet meer in top 5', amount: pos.qty });
-          } catch (e) { console.error('Rotatie fout:', e.message); }
-        }
-      }
-
       // Verkoop BND bij herstel
       const bndPosition = positions.find(p => p.symbol === 'BND');
       if (bndPosition && bondFraction === 0) {
