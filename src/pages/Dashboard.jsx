@@ -193,7 +193,9 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     async function runAutoTrade() {
       try {
         const keysWithMode = alpacaKeys ? { ...alpacaKeys, live: brokerMode === 'live' } : alpacaKeys;
-        const result = await alpacaAutoTrade(settings.risk, settings.amount, keysWithMode);
+        // Bij live: gebruik Alpaca saldo, niet de inleg uit onboarding
+        const tradeAmount = brokerMode === 'live' ? null : settings.amount;
+        const result = await alpacaAutoTrade(settings.risk, tradeAmount, keysWithMode);
         setAlpacaTradeResult(result);
         loadAlpaca(); // Herlaad data na trades
       } catch (err) {
@@ -683,16 +685,18 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       waiting: true,
     };
   } else if (brokerMode === 'live' && alpacaAccount) {
-    // Live: gebruik ECHTE getallen van Alpaca
-    const startAmount = settings.amount || 0;
-    const gain = alpacaAccount.equity - startAmount;
-    const gainPct = startAmount > 0 ? ((gain / startAmount) * 100) : 0;
+    // Live: Alpaca is volledig leidend
+    const totalInvested = alpacaPositions.reduce((sum, p) => sum + (p.qty * p.avgBuyPrice), 0);
+    const totalValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
+    const totalGain = alpacaPositions.reduce((sum, p) => sum + p.unrealizedPL, 0);
+    const equity = alpacaAccount.equity;
+    const gainPct = totalInvested > 0 ? ((totalGain / totalInvested) * 100) : 0;
     summary = {
-      currentValue: alpacaAccount.equity,
-      gainLoss: gain,
+      currentValue: equity,
+      gainLoss: totalGain,
       gainLossPercent: gainPct.toFixed(2),
-      isPositive: gain >= 0,
-      status: aiMessage?.message || 'Live verbonden met Alpaca',
+      isPositive: totalGain >= 0,
+      status: aiMessage?.message || `Live verbonden — $${alpacaAccount.cash.toFixed(0)} cash beschikbaar`,
       currency: '$',
     };
   } else if (liveTotals) {
@@ -882,28 +886,58 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       </div>
 
       {/* Live trading: toon echte Alpaca posities */}
-      {brokerMode === 'live' && alpacaPositions.length > 0 && (
+      {/* Live trading: echte Alpaca posities */}
+      {brokerMode === 'live' && (
         <div className="portfolio-section">
-          <h3 className="section-title">Jouw posities (live)</h3>
-          <div className="holdings-list">
-            {alpacaPositions.map((pos, i) => (
-              <div key={pos.symbol} className={`holding-card ${pos.unrealizedPL >= 0 ? 'gain-positive' : 'gain-negative'}`}>
-                <div className="holding-left">
-                  <div className="holding-rank">#{i + 1}</div>
-                  <div>
-                    <div className="holding-symbol">{pos.symbol}</div>
-                    <div className="holding-name">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
-                  </div>
-                </div>
-                <div className="holding-right">
-                  <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
-                  <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
-                    {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
-                  </div>
-                </div>
+          <h3 className="section-title">
+            Jouw posities (live)
+            {alpacaAccount && <span style={{ fontWeight: 400, fontSize: 13, color: '#78909C' }}> — ${alpacaAccount.cash.toFixed(0)} cash</span>}
+          </h3>
+
+          {alpacaPositions.length > 0 ? (
+            <>
+              <div className="allocation-chart">
+                <PieChart width={160} height={160}>
+                  <Pie data={alpacaPositions} dataKey="marketValue" nameKey="symbol" cx="50%" cy="50%" outerRadius={70} innerRadius={40}>
+                    {alpacaPositions.map((_, i) => (
+                      <Cell key={i} fill={ULTRA_COLORS[i % ULTRA_COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
               </div>
-            ))}
-          </div>
+
+              <div className="holdings-list">
+                {alpacaPositions.map((pos, i) => {
+                  const totalValue = alpacaPositions.reduce((s, p) => s + p.marketValue, 0);
+                  const pct = totalValue > 0 ? ((pos.marketValue / totalValue) * 100).toFixed(0) : 0;
+                  return (
+                    <div key={pos.symbol} className={`holding-card ${pos.unrealizedPL >= 0 ? 'gain-positive' : 'gain-negative'}`}>
+                      <div className="holding-left">
+                        <div className="holding-rank">#{i + 1}</div>
+                        <div>
+                          <div className="holding-symbol">{pos.symbol}</div>
+                          <div className="holding-name">{pos.qty} stuks @ ${pos.avgBuyPrice.toFixed(2)}</div>
+                        </div>
+                      </div>
+                      <div className="holding-right">
+                        <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
+                        <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
+                          {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
+                        </div>
+                        <div className="holding-weight">{pct}% van portfolio</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <p style={{ textAlign: 'center', color: '#78909C', padding: 20 }}>
+              {alpacaAccount && alpacaAccount.cash > 1
+                ? 'De AI begint met beleggen zodra de markt open is (15:30 NL tijd)'
+                : 'Wachten op storting — maak geld over naar je Alpaca account'}
+            </p>
+          )}
         </div>
       )}
 
@@ -1131,10 +1165,17 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
 
       {/* Info cards */}
       <div className="info-grid">
-        <div className="info-card clickable" onClick={() => setActiveModal('money')}>
-          <span className="info-label">Inleg <span className="edit-icon">✎</span></span>
-          <span className="info-value">€{settings.amount.toLocaleString('nl-NL')}</span>
-        </div>
+        {brokerMode === 'live' ? (
+          <div className="info-card">
+            <span className="info-label">Saldo (Alpaca)</span>
+            <span className="info-value">${alpacaAccount ? alpacaAccount.equity.toLocaleString('en-US', { minimumFractionDigits: 2 }) : 'Laden...'}</span>
+          </div>
+        ) : (
+          <div className="info-card clickable" onClick={() => setActiveModal('money')}>
+            <span className="info-label">Inleg <span className="edit-icon">✎</span></span>
+            <span className="info-value">€{settings.amount.toLocaleString('nl-NL')}</span>
+          </div>
+        )}
         {!isCryptoMode(settings.risk) && (
           <>
             <div className="info-card clickable" onClick={() => setActiveModal('goal')}>
