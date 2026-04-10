@@ -37,6 +37,13 @@ export async function fetchTopStocks(count = 5) {
 }
 
 // ========== Alpaca ==========
+export async function fetchAlpacaDeposits(keys, live) {
+  const params = keys ? `?apiKey=${keys.apiKey}&secretKey=${keys.secretKey}&live=${live}` : '';
+  const res = await fetch(`${API_BASE}/alpaca/deposits${params}`);
+  if (!res.ok) return { netDeposited: 0 };
+  return res.json();
+}
+
 export async function fetchAlpacaAccount(keys, live) {
   const params = keys ? `?apiKey=${keys.apiKey}&secretKey=${keys.secretKey}&live=${live}` : '';
   const res = await fetch(`${API_BASE}/alpaca/account${params}`);

@@ -491,6 +491,48 @@ app.get('/api/stocks/history', async (req, res) => {
   }
 });
 
+// Totale stortingen ophalen van Alpaca
+app.get('/api/alpaca/deposits', async (req, res) => {
+  try {
+    const fetcher = makeAlpacaFetcher(req.query.apiKey, req.query.secretKey, req.query.live === 'true');
+    const activities = await fetcher('/account/activities?activity_types=CSD,CSW&direction=desc&page_size=100');
+
+    let totalDeposited = 0;
+    let totalWithdrawn = 0;
+    const transfers = [];
+
+    for (const act of activities) {
+      const amount = parseFloat(act.net_amount || act.qty || 0);
+      if (act.activity_type === 'CSD' && amount > 0) {
+        totalDeposited += amount;
+        transfers.push({ type: 'deposit', amount, date: act.date || act.transaction_time });
+      } else if (act.activity_type === 'CSW' || amount < 0) {
+        totalWithdrawn += Math.abs(amount);
+        transfers.push({ type: 'withdraw', amount: Math.abs(amount), date: act.date || act.transaction_time });
+      }
+    }
+
+    res.json({
+      totalDeposited,
+      totalWithdrawn,
+      netDeposited: totalDeposited - totalWithdrawn,
+      transfers: transfers.slice(0, 20),
+    });
+  } catch (err) {
+    // Fallback: bereken uit equity - unrealized P/L
+    try {
+      const fetcher = makeAlpacaFetcher(req.query.apiKey, req.query.secretKey, req.query.live === 'true');
+      const account = await fetcher('/account');
+      const positions = await fetcher('/positions');
+      const totalPL = positions.reduce((sum, p) => sum + parseFloat(p.unrealized_pl || 0), 0);
+      const netDeposited = parseFloat(account.equity) - totalPL;
+      res.json({ totalDeposited: netDeposited, totalWithdrawn: 0, netDeposited, transfers: [] });
+    } catch (err2) {
+      res.status(500).json({ error: err2.message });
+    }
+  }
+});
+
 // Markt status
 app.get('/api/market-status', async (req, res) => {
   try {

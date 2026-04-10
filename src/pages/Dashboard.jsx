@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchPortfolio, fetchStocks, fetchCrypto, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
+import { fetchPortfolio, fetchStocks, fetchCrypto, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, fetchAlpacaDeposits, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
 import { loadPortfolioHoldings, savePortfolioHoldings } from '../data/supabase';
 import { buildPortfolio, buildUltraPortfolio, buildCryptoPortfolio, getPortfolioTotals, isUltraMode, isCryptoMode } from '../data/portfolioAllocator';
 import {
@@ -28,6 +28,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [alpacaPositions, setAlpacaPositions] = useState([]);
   const [alpacaTradeResult, setAlpacaTradeResult] = useState(null);
   const [emergencyStopped, setEmergencyStopped] = useState(false);
+  const [totalDeposited, setTotalDeposited] = useState(null);
   const [liveWarningDismissed, setLiveWarningDismissed] = useState(() => {
     try { return localStorage.getItem('live_warning_dismissed_' + (settings.id || '')) === 'true'; }
     catch { return false; }
@@ -174,14 +175,16 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
     if (brokerMode !== 'paper' && brokerMode !== 'live') return;
     async function loadAlpaca() {
       try {
-        const [account, positions, emergencyStatus] = await Promise.all([
+        const [account, positions, emergencyStatus, deposits] = await Promise.all([
           fetchAlpacaAccount(alpacaKeys, brokerMode === 'live'),
           fetchAlpacaPositions(alpacaKeys, brokerMode === 'live'),
           fetchEmergencyStatus(),
+          fetchAlpacaDeposits(alpacaKeys, brokerMode === 'live'),
         ]);
         setAlpacaAccount(account);
         setAlpacaPositions(positions);
         setEmergencyStopped(emergencyStatus.stopped);
+        if (deposits.netDeposited > 0) setTotalDeposited(deposits.netDeposited);
       } catch (err) {
         console.error('Alpaca laden mislukt:', err);
       }
@@ -685,19 +688,19 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       waiting: true,
     };
   } else if (brokerMode === 'live' && alpacaAccount) {
-    // Live: Alpaca is volledig leidend
-    const totalInvested = alpacaPositions.reduce((sum, p) => sum + (p.qty * p.avgBuyPrice), 0);
-    const totalValue = alpacaPositions.reduce((sum, p) => sum + p.marketValue, 0);
+    // Live: Alpaca is volledig leidend — toon in euro's
+    const usdToEur = 0.92; // Geschatte wisselkoers
     const totalGain = alpacaPositions.reduce((sum, p) => sum + p.unrealizedPL, 0);
     const equity = alpacaAccount.equity;
-    const gainPct = totalInvested > 0 ? ((totalGain / totalInvested) * 100) : 0;
+    const deposited = totalDeposited || equity;
+    const gainPct = deposited > 0 ? ((totalGain / deposited) * 100) : 0;
     summary = {
-      currentValue: equity,
-      gainLoss: totalGain,
+      currentValue: equity * usdToEur,
+      gainLoss: totalGain * usdToEur,
       gainLossPercent: gainPct.toFixed(2),
       isPositive: totalGain >= 0,
-      status: aiMessage?.message || `Live verbonden — $${alpacaAccount.cash.toFixed(0)} cash beschikbaar`,
-      currency: '$',
+      status: aiMessage?.message || `Live verbonden — €${(alpacaAccount.cash * usdToEur).toFixed(0)} cash beschikbaar`,
+      currency: '€',
     };
   } else if (liveTotals) {
     // Simulatie en paper: lokale berekening
@@ -1167,8 +1170,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
       <div className="info-grid">
         {brokerMode === 'live' ? (
           <div className="info-card">
-            <span className="info-label">Saldo (Alpaca)</span>
-            <span className="info-value">${alpacaAccount ? alpacaAccount.equity.toLocaleString('en-US', { minimumFractionDigits: 2 }) : 'Laden...'}</span>
+            <span className="info-label">Totaal gestort</span>
+            <span className="info-value">
+              {totalDeposited ? `€${Math.round(totalDeposited * 0.92).toLocaleString('nl-NL')}` : 'Laden...'}
+            </span>
+            <span style={{ fontSize: 11, color: '#90A4AE' }}>
+              {totalDeposited ? `$${Math.round(totalDeposited).toLocaleString('en-US')} op Alpaca` : ''}
+            </span>
           </div>
         ) : (
           <div className="info-card clickable" onClick={() => setActiveModal('money')}>
