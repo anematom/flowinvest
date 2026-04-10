@@ -29,10 +29,15 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
   const [alpacaTradeResult, setAlpacaTradeResult] = useState(null);
   const [emergencyStopped, setEmergencyStopped] = useState(false);
   const [totalDeposited, setTotalDeposited] = useState(null);
-  const [liveWarningDismissed, setLiveWarningDismissed] = useState(() => {
-    try { return localStorage.getItem('live_warning_dismissed_' + (settings.id || '')) === 'true'; }
-    catch { return false; }
-  });
+  const [liveWarningDismissed, setLiveWarningDismissed] = useState(false);
+
+  // Sync warning dismissed state met localStorage bij portfolio switch
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem('live_warning_dismissed_' + (settings.id || '')) === 'true';
+      setLiveWarningDismissed(dismissed);
+    } catch { setLiveWarningDismissed(false); }
+  }, [settings.id]);
   const [liveMode, setLiveMode] = useState(true);
   const [virtualPortfolio, setVirtualPortfolio] = useState(null);
   const [liveTotals, setLiveTotals] = useState(null);
