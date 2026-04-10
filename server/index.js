@@ -1008,22 +1008,51 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       }
     }
 
-    // 6. Herbalanceer: verkoop posities die niet in top 8 zitten EERST
+    // 6. Herbalanceer naar top 8
     const top8Syms = top8.map(s => s.symbol);
+
+    // 6a. Verkoop posities die niet meer in top 8 zitten
     for (const pos of positions) {
       if (pos.symbol !== 'BND' && !top8Syms.includes(pos.symbol)) {
         try {
           const result = await userPlaceOrder(
             { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
-            'Herbalancering: niet meer in top 8'
+            'Niet meer in top 8'
           );
           if (!result.skipped) trades.push({ symbol: pos.symbol, action: 'ROTATIE', reason: 'Niet meer in top 8', amount: pos.qty });
         } catch (e) { console.error('Rotatie fout:', e.message); }
       }
     }
 
+    // 6b. Verkoop overwogen posities om ruimte te maken voor nieuwe
+    // Als we minder dan 8 posities hebben, moeten bestaande verkleind worden
+    if (positions.length < 8 && positions.length > 0) {
+      const totalValue = positions.reduce((sum, p) => sum + parseFloat(p.market_value), 0) + cash;
+      for (const pos of positions) {
+        if (pos.symbol === 'BND') continue;
+        const currentValue = parseFloat(pos.market_value);
+        const idx = top8Syms.indexOf(pos.symbol);
+        if (idx === -1) continue;
+        const targetValue = totalValue * stockFraction * weights[idx];
+        const excess = currentValue - targetValue;
+        if (excess > 10) {
+          // Verkoop het overschot
+          const sellQty = (excess / parseFloat(pos.current_price)).toFixed(4);
+          if (parseFloat(sellQty) > 0.001) {
+            try {
+              const result = await userPlaceOrder(
+                { symbol: pos.symbol, qty: sellQty, side: 'sell', type: 'market', time_in_force: 'day' },
+                'Herbalancering naar top 8'
+              );
+              if (!result.skipped) trades.push({ symbol: pos.symbol, action: 'HERBALANCEER', reason: `Verkleind naar ${(weights[idx]*100).toFixed(0)}%`, amount: sellQty });
+            } catch (e) { console.error('Herbalanceer fout:', e.message); }
+          }
+        }
+      }
+    }
+
     // 7. Koop top 8 aandelen — gebruik beschikbaar budget
-    // Herbereken cash na rotatie verkopen
+    // Herbereken cash na herbalancering
     const updatedAccount = await userAlpacaFetch('/account').catch(() => account);
     const updatedCash = parseFloat(updatedAccount.cash || cash);
     const updatedPositions = await userAlpacaFetch('/positions').catch(() => positions);
