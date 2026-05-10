@@ -751,9 +751,10 @@ app.get('/api/alpaca/emergency-status', (req, res) => {
   res.json({ stopped: emergencyStop });
 });
 
-// Rate limiting — max 10 orders per uur (per API key)
+// Rate limiting — max 30 orders per uur (per API key)
+// 8 koop + 8 verkoop + herbalancering = tot 24 orders bij herstart
 const orderCounts = {}; // { apiKey: { count, reset } }
-const MAX_ORDERS_PER_HOUR = 10;
+const MAX_ORDERS_PER_HOUR = 30;
 
 function checkRateLimit(apiKey) {
   const key = apiKey || 'default';
@@ -934,8 +935,8 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 
     // User-specifieke placeOrder
     async function userPlaceOrder(orderBody, reason) {
-      if (emergencyStop) return { skipped: true, reason: 'Noodstop actief' };
-      if (!checkRateLimit(useKey)) return { skipped: true, reason: 'Max orders per uur bereikt' };
+      if (emergencyStop) { console.log(`Auto-trade: ORDER GEBLOKKEERD ${orderBody.symbol} — noodstop actief`); return { skipped: true, reason: 'Noodstop actief' }; }
+      if (!checkRateLimit(useKey)) { console.log(`Auto-trade: ORDER GEBLOKKEERD ${orderBody.symbol} — rate limit bereikt`); return { skipped: true, reason: 'Max orders per uur bereikt' }; }
       const result = await userAlpacaFetch('/orders', {
         method: 'POST',
         body: JSON.stringify(orderBody),
@@ -1063,10 +1064,14 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     if (updatedCash > 10 && remainingBudget > 1) {
       const stockBudget = Math.min(updatedCash, remainingBudget, targetStockValue) * 0.95;
 
+      console.log(`Auto-trade: stockBudget=$${stockBudget.toFixed(2)}, targetStockValue=$${targetStockValue.toFixed(2)}, cash=$${updatedCash.toFixed(2)}, remainingBudget=$${remainingBudget.toFixed(2)}`);
       for (let i = 0; i < top8.length; i++) {
         const stock = top8[i];
         const buyAmount = stockBudget * weights[i];
-        if (buyAmount < 1) continue;
+        if (buyAmount < 1) {
+          console.log(`Auto-trade: SKIP ${stock.symbol} — buyAmount $${buyAmount.toFixed(2)} < $1`);
+          continue;
+        }
 
         const existing = updatedPositions.find(p => p.symbol === stock.symbol);
         const existingValue = existing ? parseFloat(existing.market_value) : 0;
@@ -1074,7 +1079,10 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
 
         if (existingValue < targetValue * 0.9) {
           const toBuy = Math.min(buyAmount, targetValue - existingValue);
-          if (toBuy < 1) continue;
+          if (toBuy < 1) {
+            console.log(`Auto-trade: SKIP ${stock.symbol} — toBuy $${toBuy.toFixed(2)} < $1`);
+            continue;
+          }
 
           try {
             const result = await userPlaceOrder(
@@ -1275,6 +1283,40 @@ app.get('/api/health', (req, res) => {
 // ============================================
 // SERVER START
 // ============================================
+// ============================================
+// KEEP-ALIVE — voorkom dat Supabase in slaapstand gaat
+// Supabase free tier pauzéért na 7 dagen inactiviteit
+// Dit stuurt elke 4 uur een simpele query om dat te voorkomen
+// ============================================
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://hwevdgjuxewdqzmcakpk.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3ZXZkZ2p1eGV3ZHF6bWNha3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODI2NDksImV4cCI6MjA5MDU1ODY0OX0.u1ih2CjiKv-6bYNyuyCRbbZzyENtfPj1-DE5ZzSXQ6E';
+
+async function keepSupabaseAlive() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolios?select=id&limit=1`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+    console.log(`Keep-alive: Supabase ping ${res.ok ? 'OK' : 'FAILED'} (${res.status})`);
+  } catch (err) {
+    console.error('Keep-alive: Supabase ping mislukt:', err.message);
+  }
+}
+
+// Elke 4 uur Supabase pingen
+setInterval(keepSupabaseAlive, 4 * 60 * 60 * 1000);
+
+// Self-ping: houd Render wakker (elke 10 min)
+// Zonder dit slaapt Render na 15 min en stopt de Supabase keep-alive ook
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://flowinvest.onrender.com';
+setInterval(async () => {
+  try {
+    await fetch(`${RENDER_URL}/api/health`);
+  } catch {}
+}, 10 * 60 * 1000);
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`FlowInvest API draait op http://localhost:${PORT}`);
@@ -1283,4 +1325,6 @@ app.listen(PORT, () => {
     console.log('   Ga naar https://finnhub.io/register voor een gratis key.');
     console.log('   Start dan met: FINNHUB_API_KEY=jouw_key node server/index.js');
   }
+  // Eerste keep-alive ping bij opstarten
+  keepSupabaseAlive();
 });
