@@ -117,3 +117,21 @@
 .login-switch:hover {
   text-decoration: underline;
 }
+
+.login-forgot {
+  background: none;
+  border: none;
+  color: #78909C;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  margin-top: 14px;
+  padding: 0;
+  display: block;
+  width: 100%;
+}
+
+.login-forgot:hover {
+  color: #4CAF50;
+  text-decoration: underline;
+}

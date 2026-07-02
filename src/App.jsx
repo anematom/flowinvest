@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Assistant from './pages/Assistant';
@@ -31,7 +32,12 @@ function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setUser(session?.user || null);
+        setPage('reset-password');
+        return;
+      }
       if (session?.user) {
         setUser(session.user);
       } else {
@@ -192,6 +198,10 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (page === 'reset-password') {
+    return <ResetPassword onDone={() => setPage(user ? 'loading' : 'login')} />;
   }
 
   if (page === 'login' || !user) {

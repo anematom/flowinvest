@@ -28,6 +28,19 @@ export async function getUser() {
   return user;
 }
 
+export async function resetPasswordForEmail(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  if (error) throw error;
+}
+
+export async function updatePassword(newPassword) {
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+  return data;
+}
+
 // ========== Portfolios ==========
 export async function loadPortfolios(userId) {
   const { data, error } = await supabase
