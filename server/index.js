@@ -1053,6 +1053,9 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     }
 
     // 7. Koop top 8 aandelen — gebruik beschikbaar budget
+    // Wacht kort zodat Alpaca de sell orders kan settelen en cash vrijkomt
+    await new Promise(r => setTimeout(r, 2000));
+
     // Herbereken cash na herbalancering
     const updatedAccount = await userAlpacaFetch('/account').catch(() => account);
     const updatedCash = parseFloat(updatedAccount.cash || cash);
@@ -1062,34 +1065,40 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     const remainingBudget = Math.max(0, totalBudget - updatedPositionValue);
 
     if (updatedCash > 10 && remainingBudget > 1) {
-      const stockBudget = Math.min(updatedCash, remainingBudget, targetStockValue) * 0.95;
-
-      console.log(`Auto-trade: stockBudget=$${stockBudget.toFixed(2)}, targetStockValue=$${targetStockValue.toFixed(2)}, cash=$${updatedCash.toFixed(2)}, remainingBudget=$${remainingBudget.toFixed(2)}`);
-      for (let i = 0; i < top8.length; i++) {
-        const stock = top8[i];
-        const buyAmount = stockBudget * weights[i];
-        if (buyAmount < 1) {
-          console.log(`Auto-trade: SKIP ${stock.symbol} — buyAmount $${buyAmount.toFixed(2)} < $1`);
-          continue;
-        }
-
+      // Bereken per top-8 positie het tekort t.o.v. target
+      const shortages = top8.map((stock, i) => {
         const existing = updatedPositions.find(p => p.symbol === stock.symbol);
         const existingValue = existing ? parseFloat(existing.market_value) : 0;
         const targetValue = targetStockValue * weights[i];
+        // Alleen tekort tellen als bestaande < 90% van target (net als voorheen)
+        const shortage = existingValue < targetValue * 0.9 ? (targetValue - existingValue) : 0;
+        return { stock, i, targetValue, existingValue, shortage };
+      });
 
-        if (existingValue < targetValue * 0.9) {
-          const toBuy = Math.min(buyAmount, targetValue - existingValue);
+      const totalShortage = shortages.reduce((sum, s) => sum + s.shortage, 0);
+      const availableBudget = Math.min(updatedCash, remainingBudget) * 0.95;
+
+      console.log(`Auto-trade: availableBudget=$${availableBudget.toFixed(2)}, totalShortage=$${totalShortage.toFixed(2)}, cash=$${updatedCash.toFixed(2)}, remainingBudget=$${remainingBudget.toFixed(2)}`);
+
+      if (totalShortage > 0) {
+        // Verdeel beschikbaar budget naar rato van tekort per positie,
+        // zodat lege posities NIET slechts een fractie van hun eigen weight krijgen
+        for (const s of shortages) {
+          if (s.shortage < 1) continue;
+          const fraction = s.shortage / totalShortage;
+          const toBuy = Math.min(availableBudget * fraction, s.shortage);
+
           if (toBuy < 1) {
-            console.log(`Auto-trade: SKIP ${stock.symbol} — toBuy $${toBuy.toFixed(2)} < $1`);
+            console.log(`Auto-trade: SKIP ${s.stock.symbol} — toBuy $${toBuy.toFixed(2)} < $1`);
             continue;
           }
 
           try {
             const result = await userPlaceOrder(
-              { symbol: stock.symbol, notional: toBuy.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
-              `Top ${i + 1} momentum`
+              { symbol: s.stock.symbol, notional: toBuy.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
+              `Top ${s.i + 1} momentum`
             );
-            if (!result.skipped) trades.push({ symbol: stock.symbol, action: 'KOOP', reason: `Top ${i + 1} momentum`, amount: `$${toBuy.toFixed(2)}` });
+            if (!result.skipped) trades.push({ symbol: s.stock.symbol, action: 'KOOP', reason: `Top ${s.i + 1} momentum`, amount: `$${toBuy.toFixed(2)}` });
           } catch (e) { console.error('Koop fout:', e.message); }
         }
       }
