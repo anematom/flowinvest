@@ -816,6 +816,72 @@ async function placeOrder(orderBody, reason) {
 // AUTO-TRADE
 // ============================================
 
+// Debug endpoint — laat account status zien zonder trades te plaatsen
+app.post('/api/alpaca/debug-status', async (req, res) => {
+  try {
+    const { alpacaKeys: userKeys } = req.body;
+    const useKey = userKeys?.apiKey || ALPACA_KEY;
+    const useSecret = userKeys?.secretKey || ALPACA_SECRET;
+    const isLive = userKeys?.live === true;
+    const baseUrl = isLive ? ALPACA_LIVE_BASE : ALPACA_BASE;
+    if (!useKey || !useSecret) return res.status(400).json({ error: 'geen keys' });
+
+    async function fetchApi(endpoint) {
+      const r = await fetch(`${baseUrl}${endpoint}`, {
+        headers: { 'APCA-API-KEY-ID': useKey, 'APCA-API-SECRET-KEY': useSecret }
+      });
+      if (!r.ok) throw new Error(`${endpoint}: ${r.status}`);
+      return r.json();
+    }
+
+    const [account, positions, openOrders, clock] = await Promise.all([
+      fetchApi('/account'),
+      fetchApi('/positions'),
+      fetchApi('/orders?status=open&limit=50'),
+      fetchApi('/clock')
+    ]);
+
+    res.json({
+      isLive,
+      account: {
+        equity: parseFloat(account.equity),
+        cash: parseFloat(account.cash),
+        buying_power: parseFloat(account.buying_power),
+        non_marginable_buying_power: parseFloat(account.non_marginable_buying_power || 0),
+        pattern_day_trader: account.pattern_day_trader,
+        account_blocked: account.account_blocked,
+        trading_blocked: account.trading_blocked,
+        status: account.status
+      },
+      positions: positions.map(p => ({
+        symbol: p.symbol,
+        qty: parseFloat(p.qty),
+        market_value: parseFloat(p.market_value),
+        avg_entry: parseFloat(p.avg_entry_price),
+        current_price: parseFloat(p.current_price),
+        unrealized_pl: parseFloat(p.unrealized_pl),
+        unrealized_plpc: (parseFloat(p.unrealized_plpc) * 100).toFixed(2) + '%'
+      })),
+      pendingOrders: openOrders.map(o => ({
+        symbol: o.symbol,
+        side: o.side,
+        qty: o.qty,
+        notional: o.notional,
+        status: o.status,
+        submitted_at: o.submitted_at
+      })),
+      market: {
+        is_open: clock.is_open,
+        next_open: clock.next_open,
+        next_close: clock.next_close,
+        now: clock.timestamp
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/alpaca/auto-trade', async (req, res) => {
   try {
     // Noodstop check
@@ -852,9 +918,44 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       return r.json();
     }
 
-    // 0. Annuleer openstaande orders om wash trade errors te voorkomen
-    console.log('Auto-trade: cancelling open orders before new cycle');
-    try { await userAlpacaFetch('/orders', { method: 'DELETE' }); } catch {}
+    // 0a. Check of de markt open is — anders slaan we deze cycle over
+    //     zodat we geen orders plaatsen die toch niet fillen (en dan bij
+    //     volgende cycle gecanceld worden — endless loop)
+    try {
+      const clock = await userAlpacaFetch('/clock');
+      if (clock && !clock.is_open) {
+        return res.json({
+          action: 'skip',
+          reason: 'Markt is gesloten — wachten op opening',
+          trades: [],
+          marketNextOpen: clock.next_open
+        });
+      }
+    } catch {}
+
+    // 0b. Als er nog pending orders zijn, laat ze fillen ipv annuleren.
+    //     Alleen orders ouder dan 15 min annuleren (waarschijnlijk hangend).
+    try {
+      const openOrders = await userAlpacaFetch('/orders?status=open&limit=50');
+      const cutoff = Date.now() - 15 * 60 * 1000;
+      const oldOrders = (openOrders || []).filter(o => new Date(o.submitted_at).getTime() < cutoff);
+      const recentOrders = (openOrders || []).filter(o => new Date(o.submitted_at).getTime() >= cutoff);
+
+      if (oldOrders.length > 0) {
+        console.log(`Auto-trade: cancelling ${oldOrders.length} hanging orders (>15 min)`);
+        for (const o of oldOrders) {
+          try { await userAlpacaFetch(`/orders/${o.id}`, { method: 'DELETE' }); } catch {}
+        }
+      }
+      if (recentOrders.length > 0) {
+        return res.json({
+          action: 'waiting',
+          reason: `${recentOrders.length} pending orders wachten op fill`,
+          trades: [],
+          pendingOrders: recentOrders.map(o => ({ symbol: o.symbol, side: o.side, submittedAt: o.submitted_at }))
+        });
+      }
+    } catch (e) { console.log('Auto-trade: order check faalde:', e.message); }
 
     // 1. Haal account info en huidige posities op
     const [account, positions] = await Promise.all([
