@@ -1160,9 +1160,25 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     // Herbereken cash na herbalancering
     const updatedAccount = await userAlpacaFetch('/account').catch(() => account);
     const updatedCash = parseFloat(updatedAccount.cash || cash);
-    // buying_power houdt rekening met margin en unsettled cash — gebruik die als bovengrens
+    // buying_power houdt rekening met margin/unsettled cash — gebruik die als bovengrens
     const buyingPower = parseFloat(updatedAccount.buying_power || updatedCash);
+    const nonMarginable = parseFloat(updatedAccount.non_marginable_buying_power || 0);
     const updatedPositions = await userAlpacaFetch('/positions').catch(() => positions);
+
+    // Diagnostische snapshot van accountstate voor debugging
+    const diagnostics = {
+      accountType: updatedAccount.account_type || (updatedAccount.multiplier > 1 ? 'margin' : 'cash'),
+      multiplier: parseFloat(updatedAccount.multiplier || 1),
+      cash: updatedCash,
+      buying_power: buyingPower,
+      non_marginable_buying_power: nonMarginable,
+      equity: parseFloat(updatedAccount.equity || 0),
+      positionCount: updatedPositions.length,
+      positionSymbols: updatedPositions.map(p => p.symbol),
+      top8: top8.map(s => s.symbol),
+      targetStockValue,
+    };
+    console.log('Auto-trade diagnostics:', JSON.stringify(diagnostics));
 
     if (buyingPower > 10) {
       // Bereken per top-8 positie het tekort t.o.v. target
@@ -1235,6 +1251,28 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       }
     }
 
+    // Bepaal waarom er geen KOOP orders zijn (als dat het geval is)
+    const koopTrades = trades.filter(t => t.action === 'KOOP');
+    let skipReason = null;
+    if (koopTrades.length === 0) {
+      if (buyingPower <= 10) {
+        skipReason = `buying_power=$${buyingPower.toFixed(2)} te laag (cash=$${updatedCash.toFixed(2)}, non_marginable=$${nonMarginable.toFixed(2)}). Waarschijnlijk cash account met unsettled cash (T+1 settlement). Wacht 1 werkdag.`;
+      } else {
+        // Was buying_power OK maar niks gekocht — check shortage
+        const totalShortage = top8.reduce((sum, stock, i) => {
+          const existing = updatedPositions.find(p => p.symbol === stock.symbol);
+          const existingValue = existing ? parseFloat(existing.market_value) : 0;
+          const targetValue = targetStockValue * weights[i];
+          return sum + (existingValue < targetValue * 0.9 ? (targetValue - existingValue) : 0);
+        }, 0);
+        if (totalShortage < 1) {
+          skipReason = 'Alle top-8 posities zitten al op target — niks te kopen';
+        } else {
+          skipReason = `Shortage $${totalShortage.toFixed(2)} maar toch niks gekocht (mogelijk toBuy < $1 per positie of order fout)`;
+        }
+      }
+    }
+
     res.json({
       mode,
       avgChange: avgChange.toFixed(2),
@@ -1244,6 +1282,8 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       trades,
       equity,
       cash,
+      diagnostics,
+      skipReason,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
