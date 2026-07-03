@@ -1025,19 +1025,19 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       }
     }
 
-    // 6b. Verkoop overwogen posities om ruimte te maken voor nieuwe
-    // Als we minder dan 8 posities hebben, moeten bestaande verkleind worden
-    if (positions.length < 8 && positions.length > 0) {
-      const totalValue = positions.reduce((sum, p) => sum + parseFloat(p.market_value), 0) + cash;
+    // 6b. Verkoop overwogen posities om ruimte te maken voor de andere top 8
+    // Gebruikt targetStockValue (user's beoogde portfolio grootte), NIET current totalValue
+    // — anders wordt bij een groot bestaand portfolio niks verkocht en blijft cash op nul
+    if (positions.length > 0) {
       for (const pos of positions) {
         if (pos.symbol === 'BND') continue;
         const currentValue = parseFloat(pos.market_value);
         const idx = top8Syms.indexOf(pos.symbol);
-        if (idx === -1) continue;
-        const targetValue = totalValue * stockFraction * weights[idx];
+        if (idx === -1) continue; // niet in top 8 — al afgehandeld in 6a
+        const targetValue = targetStockValue * weights[idx];
         const excess = currentValue - targetValue;
-        if (excess > 10) {
-          // Verkoop het overschot
+        // Verkoop alleen als serieus overwogen (>10% boven target + minstens $10)
+        if (excess > 10 && excess > targetValue * 0.1) {
           const sellQty = (excess / parseFloat(pos.current_price)).toFixed(4);
           if (parseFloat(sellQty) > 0.001) {
             try {
@@ -1053,32 +1053,33 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     }
 
     // 7. Koop top 8 aandelen — gebruik beschikbaar budget
-    // Wacht kort zodat Alpaca de sell orders kan settelen en cash vrijkomt
-    await new Promise(r => setTimeout(r, 2000));
+    // Wacht zodat Alpaca de sell orders kan settelen en cash + buying_power vrijkomt
+    await new Promise(r => setTimeout(r, 4000));
 
     // Herbereken cash na herbalancering
     const updatedAccount = await userAlpacaFetch('/account').catch(() => account);
     const updatedCash = parseFloat(updatedAccount.cash || cash);
+    // buying_power houdt rekening met margin en unsettled cash — gebruik die als bovengrens
+    const buyingPower = parseFloat(updatedAccount.buying_power || updatedCash);
     const updatedPositions = await userAlpacaFetch('/positions').catch(() => positions);
-    const updatedPositionValue = updatedPositions.reduce((sum, p) => sum + parseFloat(p.market_value), 0);
-    const totalBudget = amount ? parseFloat(amount) : parseFloat(updatedAccount.equity || equity);
-    const remainingBudget = Math.max(0, totalBudget - updatedPositionValue);
 
-    if (updatedCash > 10 && remainingBudget > 1) {
+    if (buyingPower > 10) {
       // Bereken per top-8 positie het tekort t.o.v. target
       const shortages = top8.map((stock, i) => {
         const existing = updatedPositions.find(p => p.symbol === stock.symbol);
         const existingValue = existing ? parseFloat(existing.market_value) : 0;
         const targetValue = targetStockValue * weights[i];
-        // Alleen tekort tellen als bestaande < 90% van target (net als voorheen)
+        // Alleen tekort tellen als bestaande < 90% van target
         const shortage = existingValue < targetValue * 0.9 ? (targetValue - existingValue) : 0;
         return { stock, i, targetValue, existingValue, shortage };
       });
 
       const totalShortage = shortages.reduce((sum, s) => sum + s.shortage, 0);
-      const availableBudget = Math.min(updatedCash, remainingBudget) * 0.95;
+      // Beperk tot beschikbare buying_power (dekt zowel cash als margin/unsettled),
+      // maar nooit meer dan totalShortage (want dan koop je boven target)
+      const availableBudget = Math.min(buyingPower, totalShortage) * 0.95;
 
-      console.log(`Auto-trade: availableBudget=$${availableBudget.toFixed(2)}, totalShortage=$${totalShortage.toFixed(2)}, cash=$${updatedCash.toFixed(2)}, remainingBudget=$${remainingBudget.toFixed(2)}`);
+      console.log(`Auto-trade: availableBudget=$${availableBudget.toFixed(2)}, totalShortage=$${totalShortage.toFixed(2)}, cash=$${updatedCash.toFixed(2)}, buyingPower=$${buyingPower.toFixed(2)}`);
 
       if (totalShortage > 0) {
         // Verdeel beschikbaar budget naar rato van tekort per positie,
