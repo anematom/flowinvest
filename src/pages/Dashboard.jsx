@@ -737,6 +737,47 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         </div>
       </div>
 
+      {/* Live trading debug info — laat zien waarom auto-trade wel/niet werkt */}
+      {brokerMode === 'live' && alpacaTradeResult && (
+        <div style={{
+          background: alpacaTradeResult.skipReason ? '#FFF3E0' : '#E8F5E9',
+          border: '1px solid ' + (alpacaTradeResult.skipReason ? '#FFB74D' : '#81C784'),
+          borderRadius: 12,
+          padding: '12px 16px',
+          margin: '12px 0',
+          fontSize: 13,
+          color: '#37474F'
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>
+            🔍 Laatste auto-trade check
+          </div>
+          {alpacaTradeResult.action && (
+            <div>Actie: <strong>{alpacaTradeResult.action}</strong></div>
+          )}
+          {alpacaTradeResult.reason && (
+            <div>Reden: {alpacaTradeResult.reason}</div>
+          )}
+          {alpacaTradeResult.skipReason && (
+            <div style={{ marginTop: 6, padding: '6px 8px', background: '#FFCC80', borderRadius: 6 }}>
+              <strong>Waarom geen KOOP:</strong> {alpacaTradeResult.skipReason}
+            </div>
+          )}
+          {alpacaTradeResult.trades && alpacaTradeResult.trades.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              {alpacaTradeResult.trades.length} trades: {alpacaTradeResult.trades.map(t => `${t.action} ${t.symbol}`).join(', ')}
+            </div>
+          )}
+          {alpacaTradeResult.diagnostics && (
+            <details style={{ marginTop: 6 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Account details (klik uit te vouwen)</summary>
+              <pre style={{ fontSize: 11, overflow: 'auto', margin: '6px 0 0' }}>
+                {JSON.stringify(alpacaTradeResult.diagnostics, null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
+
       {/* Portfolio switcher */}
       {portfolios && portfolios.length > 0 && (
         <div className="portfolio-switcher">
