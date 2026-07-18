@@ -65,16 +65,19 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   const stockAmount = amount * stockFraction;
   const bndAmount = amount * bndFraction;
 
-  // Top 8 aandelen op basis van momentum (exclusief BND)
+  // Aantal posities dynamisch op basis van beschikbaar bedrag (minimaal $50/positie).
+  // Bij een kleine portefeuille (bijv. $340) zijn 8 posities te versnipperd.
+  const maxPositions = Math.min(8, Math.max(4, Math.floor(amount / 50)));
+
+  // Top N aandelen op basis van momentum (exclusief BND)
   const top8 = stockQuotes
     .filter(q => q.price && q.changePercent != null && q.symbol !== 'BND')
     .sort((a, b) => b.changePercent - a.changePercent)
-    .slice(0, 8);
+    .slice(0, maxPositions);
 
   if (top8.length === 0) return [];
 
   // Verdeel aandelengeld: meer naar de sterkste performers
-  // #1-3 krijgen meer, #4-8 minder (geoptimaliseerd via backtest)
   const weights = [0.20, 0.16, 0.14, 0.12, 0.10, 0.10, 0.10, 0.08];
   const usedWeights = weights.slice(0, top8.length);
   const weightSum = usedWeights.reduce((a, b) => a + b, 0);

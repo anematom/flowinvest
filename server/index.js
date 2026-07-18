@@ -1046,16 +1046,23 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       return result;
     }
 
-    // 4. Top 8 aandelen op basis van momentum (zelfde als simulatie)
-    const top8 = validQuotes
+    // 4. Aantal top-posities dynamisch bepalen op basis van equity.
+    //    Elke positie moet minimaal ~$50 waard kunnen zijn — anders krijg je
+    //    zulke kleine slots dat Alpaca ze skipt (< $1 minimum) en je vastzit.
+    //    Regel: minimaal 4 posities, maximaal 8, ~$50 per positie als richtlijn.
+    const maxPositions = Math.min(8, Math.max(4, Math.floor(availableBudget / 50)));
+
+    const topN = validQuotes
       .sort((a, b) => b.changePercent - a.changePercent)
-      .slice(0, 8);
+      .slice(0, maxPositions);
+    const top8 = topN; // alias om bestaande code niet te breken
 
     const trades = [];
     const rawWeights = [0.20, 0.16, 0.14, 0.12, 0.10, 0.10, 0.10, 0.08];
-    const usedWeights = rawWeights.slice(0, top8.length);
+    const usedWeights = rawWeights.slice(0, topN.length);
     const weightSum = usedWeights.reduce((a, b) => a + b, 0);
     const weights = usedWeights.map(w => w / weightSum);
+    console.log(`Auto-trade: equity=$${availableBudget.toFixed(0)}, using ${maxPositions} positions`);
 
     // 5. Check trailing stop-loss en vaste stop-loss
     for (const pos of positions) {
