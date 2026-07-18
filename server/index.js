@@ -355,7 +355,7 @@ app.get('/api/crypto', async (req, res) => {
 // ============================================
 // Globale momentum pool: US aandelen + regionale ETF's
 const MOMENTUM_POOL = [
-  // US Top Aandelen
+  // US Big Tech & AI
   { symbol: 'NVDA', name: 'NVIDIA', description: 'AI chips & GPU marktleider', region: 'US' },
   { symbol: 'AAPL', name: 'Apple', description: 'Consumer tech gigant', region: 'US' },
   { symbol: 'MSFT', name: 'Microsoft', description: 'Cloud & AI software', region: 'US' },
@@ -363,18 +363,39 @@ const MOMENTUM_POOL = [
   { symbol: 'AMZN', name: 'Amazon', description: 'E-commerce & AWS cloud', region: 'US' },
   { symbol: 'META', name: 'Meta', description: 'Social media & VR', region: 'US' },
   { symbol: 'TSLA', name: 'Tesla', description: 'EV & energie', region: 'US' },
+  { symbol: 'ORCL', name: 'Oracle', description: 'Enterprise cloud & database', region: 'US' },
+  { symbol: 'PLTR', name: 'Palantir', description: 'AI & data-analyse voor defense/enterprise', region: 'US' },
+  // Semiconductors
   { symbol: 'AMD', name: 'AMD', description: 'Chips & processors', region: 'US' },
   { symbol: 'AVGO', name: 'Broadcom', description: 'Semiconductors & infra', region: 'US' },
+  { symbol: 'MU', name: 'Micron', description: 'Memory chips voor AI', region: 'US' },
+  // Software & Cyber
   { symbol: 'CRM', name: 'Salesforce', description: 'Cloud CRM & AI', region: 'US' },
-  { symbol: 'NFLX', name: 'Netflix', description: 'Streaming entertainment', region: 'US' },
   { symbol: 'ADBE', name: 'Adobe', description: 'Creatieve software', region: 'US' },
-  { symbol: 'ASML', name: 'ASML', description: 'Nederlandse chipmachines', region: 'EU' },
+  { symbol: 'CRWD', name: 'CrowdStrike', description: 'Cybersecurity leider', region: 'US' },
+  { symbol: 'ANET', name: 'Arista Networks', description: 'Netwerken voor AI-datacenters', region: 'US' },
+  { symbol: 'SHOP', name: 'Shopify', description: 'E-commerce platform', region: 'US' },
+  // Consumer & Services
+  { symbol: 'NFLX', name: 'Netflix', description: 'Streaming entertainment', region: 'US' },
+  { symbol: 'UBER', name: 'Uber', description: 'Mobility & delivery', region: 'US' },
+  { symbol: 'ABNB', name: 'Airbnb', description: 'Travel & accommodations', region: 'US' },
+  // Healthcare & Payments
   { symbol: 'LLY', name: 'Eli Lilly', description: 'Farma & healthcare', region: 'US' },
   { symbol: 'V', name: 'Visa', description: 'Betalingsnetwerk', region: 'US' },
-  // Regionale ETF's
+  // Europa (via US-listing/ADR)
+  { symbol: 'ASML', name: 'ASML', description: 'Nederlandse chipmachines', region: 'EU' },
+  { symbol: 'NVO', name: 'Novo Nordisk', description: 'Deense farma (Ozempic)', region: 'EU' },
+  { symbol: 'SAP', name: 'SAP', description: 'Duitse enterprise software', region: 'EU' },
+  // Azië (via ADR)
+  { symbol: 'TSM', name: 'TSMC', description: 'Taiwanese chipmaker — grootste ter wereld', region: 'Asia' },
+  { symbol: 'BABA', name: 'Alibaba', description: 'Chinese e-commerce & cloud', region: 'Asia' },
+  { symbol: 'PDD', name: 'PDD Holdings', description: 'Temu & Pinduoduo', region: 'Asia' },
+  { symbol: 'JD', name: 'JD.com', description: 'Chinese e-commerce', region: 'Asia' },
+  { symbol: 'TM', name: 'Toyota', description: 'Japanse automotive', region: 'Asia' },
+  { symbol: 'SONY', name: 'Sony', description: 'Japanse elektronica & entertainment', region: 'Asia' },
+  // Regionale ETF's — voor bredere spreiding als momentum daarheen verschuift
   { symbol: 'VGK', name: 'Europa ETF', description: 'Europese aandelen', region: 'EU' },
   { symbol: 'MCHI', name: 'China ETF', description: 'Chinese markt', region: 'China' },
-  { symbol: 'KWEB', name: 'China Internet', description: 'Alibaba, Tencent, JD', region: 'China' },
   { symbol: 'VWO', name: 'Opkomende Markten', description: 'China, India, Brazilië', region: 'EM' },
   { symbol: 'EWJ', name: 'Japan ETF', description: 'Japanse markt', region: 'Japan' },
   { symbol: 'INDA', name: 'India ETF', description: 'Indiase markt', region: 'India' },
