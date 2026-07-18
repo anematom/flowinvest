@@ -584,16 +584,22 @@ app.get('/api/alpaca/positions', async (req, res) => {
   try {
     const fetcher = makeAlpacaFetcher(req.query.apiKey, req.query.secretKey, req.query.live === 'true');
     const positions = await fetcher('/positions');
-    res.json(positions.map(p => ({
-      symbol: p.symbol,
-      qty: parseFloat(p.qty),
-      avgBuyPrice: parseFloat(p.avg_entry_price),
-      currentPrice: parseFloat(p.current_price),
-      marketValue: parseFloat(p.market_value),
-      unrealizedPL: parseFloat(p.unrealized_pl),
-      unrealizedPLPercent: parseFloat(p.unrealized_plpc) * 100,
-      side: p.side,
-    })));
+    res.json(positions.map(p => {
+      const currentPrice = parseFloat(p.current_price);
+      const lastdayPrice = parseFloat(p.lastday_price);
+      const dailyChangePercent = lastdayPrice > 0 ? ((currentPrice - lastdayPrice) / lastdayPrice) * 100 : 0;
+      return {
+        symbol: p.symbol,
+        qty: parseFloat(p.qty),
+        avgBuyPrice: parseFloat(p.avg_entry_price),
+        currentPrice,
+        marketValue: parseFloat(p.market_value),
+        unrealizedPL: parseFloat(p.unrealized_pl),
+        unrealizedPLPercent: parseFloat(p.unrealized_plpc) * 100,
+        dailyChangePercent,
+        side: p.side,
+      };
+    }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

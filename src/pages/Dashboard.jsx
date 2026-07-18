@@ -959,8 +959,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
                       <div className="holding-right">
                         <div className="holding-value">${pos.marketValue.toFixed(2)}</div>
                         <div className={`holding-gain ${pos.unrealizedPL >= 0 ? 'positive' : 'negative'}`}>
-                          {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}%
+                          {pos.unrealizedPL >= 0 ? '+' : ''}{pos.unrealizedPLPercent.toFixed(2)}% <span className="holding-gain-label">sinds aankoop</span>
                         </div>
+                        {typeof pos.dailyChangePercent === 'number' && (
+                          <div className={`holding-daychange ${pos.dailyChangePercent >= 0 ? 'positive' : 'negative'}`}>
+                            {pos.dailyChangePercent >= 0 ? '+' : ''}{pos.dailyChangePercent.toFixed(2)}% <span className="holding-gain-label">vandaag</span>
+                          </div>
+                        )}
                         <div className="holding-weight">{pct}% van portfolio</div>
                       </div>
                     </div>

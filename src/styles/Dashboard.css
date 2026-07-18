@@ -681,6 +681,29 @@
   color: #F44336;
 }
 
+.holding-gain-label {
+  font-size: 10px;
+  color: #90A4AE;
+  font-weight: 500;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.holding-daychange {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.holding-daychange.positive {
+  color: #4CAF50;
+}
+
+.holding-daychange.negative {
+  color: #F44336;
+}
+
 /* AI Status Bar */
 .ai-status-bar {
   margin: 12px 16px;
