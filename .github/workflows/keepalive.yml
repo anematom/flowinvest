@@ -1,0 +1,64 @@
+name: Keep-alive
+
+# Houdt Supabase wakker. Supabase pauzeert gratis projecten na 7 dagen
+# inactiviteit; als dat gebeurt verdwijnt het subdomein en kan niemand
+# meer inloggen. Deze workflow draait onafhankelijk van Render/Vercel,
+# zodat hij niet meevalt als een van die diensten in slaap gaat.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'    # elke dag 06:00 UTC — ping
+    - cron: '0 5 1 * *'    # 1e van de maand — houdt de workflow zelf actief
+  workflow_dispatch:        # handmatig te starten via de Actions-tab
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://hwevdgjuxewdqzmcakpk.supabase.co' }}
+          # Anon key is publiek (staat al in de frontend-bundle, beschermd door RLS).
+          # Overschrijven kan met een repo-secret als je hem ooit roteert.
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3ZXZkZ2p1eGV3ZHF6bWNha3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODI2NDksImV4cCI6MjA5MDU1ODY0OX0.u1ih2CjiKv-6bYNyuyCRbbZzyENtfPj1-DE5ZzSXQ6E' }}
+        run: |
+          # Echte tabel uit de app (profiles), niet portfolios.
+          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' --max-time 30 \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+
+          echo "HTTP $code"
+          cat /tmp/body.txt
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase ping mislukt (HTTP $code). Project mogelijk gepauzeerd of verwijderd."
+            exit 1
+          fi
+          echo "Supabase is wakker."
+
+      - name: Ping Render backend
+        continue-on-error: true   # Render mag slapen, dat blokkeert inloggen niet
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 \
+            "${{ secrets.RENDER_URL || 'https://flowinvest.onrender.com' }}/api/health")
+          echo "Render: HTTP $code"
+
+  # GitHub schakelt cron-workflows uit na 60 dagen zonder repo-activiteit.
+  # Deze maandelijkse commit voorkomt dat de bewaking zichzelf uitzet.
+  keep-workflow-enabled:
+    if: github.event.schedule == '0 5 1 * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zet tijdstempel en commit
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/last-keepalive.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/last-keepalive.txt
+          git diff --staged --quiet || git commit -m "chore: keep-alive tijdstempel"
+          git push

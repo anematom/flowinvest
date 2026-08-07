@@ -1478,7 +1478,7 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIs
 
 async function keepSupabaseAlive() {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolios?select=id&limit=1`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id&limit=1`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
