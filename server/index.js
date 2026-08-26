@@ -910,20 +910,113 @@ const DEFENSE_CONFIG = {
 // ============================================
 
 // Noodstop — als actief, worden er geen trades geplaatst
+// ============================================
+// NOODSTOP — blijft staan na een herstart
+// ============================================
+// Dit was een variabele in het geheugen. Render free tier herstart continu,
+// dus een ingedrukte noodstop verdween vanzelf en het handelen begon stilletjes
+// weer. Nu opgeslagen in Supabase.
+//
+// Eenmalig aanmaken in de Supabase SQL editor:
+//   create table if not exists app_state (
+//     key text primary key,
+//     value jsonb not null,
+//     updated_at timestamptz not null default now()
+//   );
+//   alter table app_state enable row level security;
+//
+// Bewust GEEN policy: de server schrijft met de service role key, die RLS
+// omzeilt. Zo kan niemand met de publieke anon key de noodstop uitzetten.
+// Zet SUPABASE_SERVICE_KEY in de Render environment variables.
+
 let emergencyStop = false;
 
-app.post('/api/alpaca/emergency-stop', (req, res) => {
+const EMERGENCY_STATE_KEY = 'emergency_stop';
+
+function supabaseStateHeaders() {
+  const key = process.env.SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+  return {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+// Geeft terug:
+//   'ok'              gelezen uit Supabase, status is zeker
+//   'niet-ingericht'  tabel bestaat nog niet — terug naar geheugen, net als voorheen
+//   'onbereikbaar'    Supabase ligt eruit; we weten de status echt niet
+//
+// Dat onderscheid is belangrijk: een ontbrekende tabel is een setup-kwestie en
+// mag het handelen niet blokkeren, want dan staat ook je stop-loss stil. Een
+// onbereikbare database is iets anders — dan kan er een noodstop klaarstaan
+// die we niet zien.
+async function loadEmergencyStop() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_state?key=eq.${EMERGENCY_STATE_KEY}&select=value`,
+      { headers: supabaseStateHeaders() }
+    );
+    if (res.status === 404) {
+      console.warn('Noodstop: tabel app_state bestaat nog niet — noodstop overleeft geen herstart');
+      return 'niet-ingericht';
+    }
+    if (!res.ok) {
+      console.error(`Noodstop: laden mislukt (HTTP ${res.status})`);
+      return 'onbereikbaar';
+    }
+    const rows = await res.json();
+    if (rows.length > 0) {
+      emergencyStop = rows[0].value?.stopped === true;
+      console.log(`Noodstop uit Supabase geladen: ${emergencyStop ? 'ACTIEF' : 'uit'}`);
+    }
+    return 'ok';
+  } catch (err) {
+    console.error('Noodstop: laden mislukt:', err.message);
+    return 'onbereikbaar';
+  }
+}
+
+async function saveEmergencyStop(stopped) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state?on_conflict=key`, {
+      method: 'POST',
+      headers: { ...supabaseStateHeaders(), Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({
+        key: EMERGENCY_STATE_KEY,
+        value: { stopped },
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return true;
+  } catch (err) {
+    console.error('Noodstop: opslaan mislukt:', err.message);
+    return false;
+  }
+}
+
+app.post('/api/alpaca/emergency-stop', async (req, res) => {
   emergencyStop = true;
-  res.json({ status: 'stopped', message: 'Noodstop geactiveerd — alle automatische trades gestopt' });
+  const bewaard = await saveEmergencyStop(true);
+  res.json({
+    status: 'stopped',
+    persisted: bewaard,
+    message: bewaard
+      ? 'Noodstop geactiveerd — alle automatische trades gestopt'
+      : 'Noodstop geactiveerd, maar NIET opgeslagen. Hij vervalt bij een herstart van de server.',
+  });
 });
 
-app.post('/api/alpaca/emergency-resume', (req, res) => {
+app.post('/api/alpaca/emergency-resume', async (req, res) => {
   emergencyStop = false;
   Object.keys(orderCounts).forEach(k => delete orderCounts[k]); // Reset order tellers
+  await saveEmergencyStop(false);
   res.json({ status: 'resumed', message: 'Automatische trades hervat' });
 });
 
-app.get('/api/alpaca/emergency-status', (req, res) => {
+app.get('/api/alpaca/emergency-status', async (req, res) => {
+  await loadEmergencyStop();
   res.json({ stopped: emergencyStop });
 });
 
@@ -1067,7 +1160,9 @@ const autoTradeRunning = new Set();
 app.post('/api/alpaca/auto-trade', async (req, res) => {
   let lockKey = null;
   try {
-    // Noodstop check
+    // Noodstop verversen uit Supabase: de cron en de browser kunnen op een
+    // andere instantie terechtkomen dan waar de knop is ingedrukt.
+    const noodstopStatus = await loadEmergencyStop();
     if (emergencyStop) {
       return res.json({ action: 'stopped', reason: 'Noodstop is actief', trades: [] });
     }
@@ -1081,6 +1176,19 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     const baseUrl = isLive ? ALPACA_LIVE_BASE : ALPACA_BASE;
     if (!useKey || !useSecret) {
       return res.json({ action: 'skip', reason: 'Geen Alpaca keys geconfigureerd', trades: [] });
+    }
+
+    // Met echt geld niet handelen zolang Supabase eruit ligt: dan weten we niet
+    // of er een noodstop klaarstaat. Een nog niet aangemaakte tabel telt niet
+    // als twijfel — dat is gewoon het oude gedrag, en blokkeren zou ook je
+    // stop-loss stilzetten. Paper mag altijd door.
+    if (isLive && noodstopStatus === 'onbereikbaar') {
+      return res.json({
+        action: 'skip',
+        reason: 'Noodstop-status niet te controleren — geen live trades',
+        skipReason: 'Supabase is onbereikbaar. Zodra dat hersteld is gaat het handelen vanzelf verder.',
+        trades: [],
+      });
     }
 
     // Paper en live zijn aparte accounts en mogen elkaar niet blokkeren.
@@ -1702,4 +1810,7 @@ app.listen(PORT, () => {
   }
   // Eerste keep-alive ping bij opstarten
   keepSupabaseAlive();
+  // Noodstop terughalen: zonder dit begint de server na elke herstart weer
+  // vrolijk te handelen, ook als jij hem had stopgezet.
+  loadEmergencyStop();
 });
