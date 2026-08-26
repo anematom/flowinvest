@@ -72,16 +72,35 @@ jobs:
       - name: Staat de beurs open?
         if: env.skip != 'true'
         env:
-          KEY: ${{ secrets.ALPACA_PAPER_KEY || secrets.ALPACA_LIVE_KEY }}
-          SECRET: ${{ secrets.ALPACA_PAPER_SECRET || secrets.ALPACA_LIVE_SECRET }}
+          PAPER_KEY: ${{ secrets.ALPACA_PAPER_KEY }}
+          PAPER_SECRET: ${{ secrets.ALPACA_PAPER_SECRET }}
+          LIVE_KEY: ${{ secrets.ALPACA_LIVE_KEY }}
+          LIVE_SECRET: ${{ secrets.ALPACA_LIVE_SECRET }}
         run: |
-          if [ -z "$KEY" ]; then
+          # De klok moet bij de juiste omgeving worden opgevraagd: paper-keys
+          # werken niet op de live-API en andersom. Zonder dit onderscheid
+          # geeft de call 401, is is_open leeg, en handelt hij nooit.
+          if [ -n "$PAPER_KEY" ]; then
+            KEY="$PAPER_KEY"; SECRET="$PAPER_SECRET"
+            BASE="https://paper-api.alpaca.markets"
+          elif [ -n "$LIVE_KEY" ]; then
+            KEY="$LIVE_KEY"; SECRET="$LIVE_SECRET"
+            BASE="https://api.alpaca.markets"
+          else
             echo "::error::Geen Alpaca-keys als secret ingesteld."
             exit 1
           fi
-          open=$(curl -sS --max-time 30 \
+
+          antwoord=$(curl -sS --max-time 30 \
             -H "APCA-API-KEY-ID: $KEY" -H "APCA-API-SECRET-KEY: $SECRET" \
-            "https://paper-api.alpaca.markets/v2/clock" | jq -r '.is_open')
+            "$BASE/v2/clock")
+          open=$(echo "$antwoord" | jq -r '.is_open // "fout"')
+
+          if [ "$open" = "fout" ]; then
+            echo "::error::Kon de beursklok niet opvragen — kloppen de keys?"
+            echo "$antwoord" | jq -r '.message // .'
+            exit 1
+          fi
           echo "Beurs open: $open"
           if [ "$open" != "true" ]; then
             echo "::notice::Beurs gesloten — geen trades deze ronde."
