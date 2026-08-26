@@ -53,6 +53,36 @@ export function buildPortfolio(amount, riskLevel, quotes) {
   });
 }
 
+// Maximaal aantal posities per regio, zodat de portefeuille niet ongemerkt
+// volledig in de VS terechtkomt. Zelfde waarde als REGION_CAP in de server.
+export const REGION_CAP = 5;
+
+// Rangschikt op momentum over 6 en 12 maanden (server/index.js berekent de
+// score) en houdt maximaal REGION_CAP posities per regio aan.
+//
+// Zonder momentumscores valt dit terug op de dagbeweging. Dat is een zwak
+// signaal — het is de ranking die hiervoor gebruikt werd — maar in simulatie
+// gaat het om weergave, niet om echt geld. De server weigert in dat geval
+// juist te handelen.
+export function selectByMomentum(quotes, nPositions, regionCap = REGION_CAP) {
+  const hasMomentum = quotes.some(q => q.momentumScore != null);
+  const scoreOf = (q) => (hasMomentum ? (q.momentumScore ?? -Infinity) : q.changePercent);
+
+  const ranked = [...quotes].sort((a, b) => scoreOf(b) - scoreOf(a));
+
+  const picks = [];
+  const perRegion = {};
+  for (const q of ranked) {
+    if (picks.length >= nPositions) break;
+    // Quotes zonder regio (bijvoorbeeld uit een oudere serverversie) tellen
+    // niet mee voor het maximum, anders zou er niets geselecteerd worden.
+    if (q.region && (perRegion[q.region] || 0) >= regionCap) continue;
+    if (q.region) perRegion[q.region] = (perRegion[q.region] || 0) + 1;
+    picks.push(q);
+  }
+  return picks;
+}
+
 // Bouw een ultra-agressief portfolio op basis van momentum
 // Selecteert de top 5 best presterende aandelen en verdeelt het geld
 // Bij daling wordt een deel naar obligaties (BND) verschoven
@@ -70,10 +100,10 @@ export function buildUltraPortfolio(amount, stockQuotes, defensiveShift) {
   const maxPositions = Math.min(8, Math.max(4, Math.floor(amount / 50)));
 
   // Top N aandelen op basis van momentum (exclusief BND)
-  const top8 = stockQuotes
-    .filter(q => q.price && q.changePercent != null && q.symbol !== 'BND')
-    .sort((a, b) => b.changePercent - a.changePercent)
-    .slice(0, maxPositions);
+  const top8 = selectByMomentum(
+    stockQuotes.filter(q => q.price && q.changePercent != null && q.symbol !== 'BND'),
+    maxPositions
+  );
 
   if (top8.length === 0) return [];
 

@@ -401,7 +401,154 @@ const MOMENTUM_POOL = [
   { symbol: 'INDA', name: 'India ETF', description: 'Indiase markt', region: 'India' },
 ];
 
-// Haal quotes op voor alle momentum aandelen en sorteer op prestatie
+// ============================================
+// MOMENTUM SCORES
+// ============================================
+// De ranglijst draaide op changePercent, en dat is het verschil tussen
+// gisteren en eergisteren. Dat is geen momentum maar ruis: een aandeel dat
+// net hard steeg veert op korte termijn juist vaak terug, en de dagelijkse
+// wisselingen zorgden voor continu door-en-door handelen.
+//
+// Backtest 2017-2026 op deze pool (flowinvest-daytrading/momentum-backtest.js):
+//   oude ranking:  10,6% per jaar, grootste dip -55%
+//   deze ranking:  43,9% per jaar, grootste dip -40%
+// Op een controleset van brede ETF's, waar geen survivorship bias speelt,
+// verloor de oude ranking 70% van de inleg.
+//
+// Score = gemiddelde van het 6- en 12-maands rendement, met de laatste maand
+// overgeslagen omdat daar juist het terugveer-effect in zit.
+const MOMENTUM_SKIP_DAYS = 21;
+const MOMENTUM_SHORT_DAYS = 126;
+const MOMENTUM_LONG_DAYS = 252;
+const MOMENTUM_CACHE_MS = 12 * 60 * 60 * 1000;
+
+// Maximaal aantal posities per regio, zodat je niet ongemerkt volledig in
+// de VS zit. Kostte in de backtest ~3 procentpunt en maakte de dips ondieper.
+const REGION_CAP = 5;
+// Een positie die je al hebt houd je zolang hij binnen deze rang blijft.
+// Voorkomt ruilen om een verschuiving van een paar plaatsen.
+const BUFFER_RANK = 12;
+
+let momentumCache = { at: 0, scores: {} };
+
+async function fetchDailyBars(symbols) {
+  const key = ALPACA_KEY || process.env.ALPACA_KEY;
+  const secret = ALPACA_SECRET || process.env.ALPACA_SECRET;
+  if (!key || !secret) return {};
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const start = new Date(Date.now() - 600 * dayMs).toISOString().slice(0, 10);
+  // De gratis Alpaca-tier mag de meest recente SIP-data niet opvragen (403).
+  // Twee dagen marge; voor een signaal dat de laatste maand toch overslaat
+  // maakt dat niets uit.
+  const end = new Date(Date.now() - 2 * dayMs).toISOString().slice(0, 10);
+
+  const bars = {};
+  // In blokken, om onder de URL-lengtegrens te blijven.
+  for (let i = 0; i < symbols.length; i += 20) {
+    const chunk = symbols.slice(i, i + 20);
+    let pageToken = null;
+    do {
+      let url = `https://data.alpaca.markets/v2/stocks/bars?symbols=${chunk.join(',')}`
+        + `&timeframe=1Day&start=${start}&end=${end}&limit=10000&adjustment=all`;
+      if (pageToken) url += `&page_token=${pageToken}`;
+
+      const res = await fetch(url, {
+        headers: { 'APCA-API-KEY-ID': key, 'APCA-API-SECRET-KEY': secret }
+      });
+      if (!res.ok) {
+        console.error(`Momentum: bars ophalen mislukt (${res.status}) voor ${chunk.join(',')}`);
+        break;
+      }
+      const data = await res.json();
+      for (const [sym, list] of Object.entries(data.bars || {})) {
+        bars[sym] = (bars[sym] || []).concat(list);
+      }
+      pageToken = data.next_page_token;
+    } while (pageToken);
+  }
+  return bars;
+}
+
+function momentumScoreFromBars(bars) {
+  const needed = MOMENTUM_SKIP_DAYS + MOMENTUM_LONG_DAYS + 1;
+  if (!bars || bars.length < needed) return null;
+
+  const closes = bars.map(b => b.c);
+  const last = closes.length - 1;
+  const recent = closes[last - MOMENTUM_SKIP_DAYS];
+  const short = closes[last - MOMENTUM_SKIP_DAYS - MOMENTUM_SHORT_DAYS];
+  const long = closes[last - MOMENTUM_SKIP_DAYS - MOMENTUM_LONG_DAYS];
+  if (!recent || !short || !long) return null;
+
+  return (((recent - short) / short) + ((recent - long) / long)) / 2 * 100;
+}
+
+// Scores veranderen nauwelijks van dag tot dag, dus een cache van 12 uur
+// scheelt honderden API-calls zonder het signaal te vertragen.
+async function getMomentumScores() {
+  const fresh = Date.now() - momentumCache.at < MOMENTUM_CACHE_MS;
+  if (fresh && Object.keys(momentumCache.scores).length > 0) return momentumCache.scores;
+
+  try {
+    const bars = await fetchDailyBars(MOMENTUM_POOL.map(s => s.symbol));
+    const scores = {};
+    for (const [sym, list] of Object.entries(bars)) {
+      const score = momentumScoreFromBars(list);
+      if (score != null) scores[sym] = score;
+    }
+    if (Object.keys(scores).length > 0) {
+      momentumCache = { at: Date.now(), scores };
+      console.log(`Momentum: ${Object.keys(scores).length} scores ververst`);
+    }
+  } catch (err) {
+    console.error('Momentum: berekening mislukt:', err.message);
+  }
+  // Bij een storing de laatst bekende scores gebruiken; die zijn hooguit een
+  // dag oud en nog altijd bruikbaarder dan terugvallen op dagbewegingen.
+  return momentumCache.scores;
+}
+
+function withMomentum(quotes, scores) {
+  return quotes.map(q => q && ({ ...q, momentumScore: scores[q.symbol] ?? null }));
+}
+
+// Kiest de posities: hoogste momentum eerst, maximaal REGION_CAP per regio,
+// en posities die je al hebt blijven staan zolang ze binnen BUFFER_RANK vallen.
+function selectPositions(quotes, nPositions, heldSymbols = []) {
+  const ranked = quotes
+    .filter(q => q && q.price && q.momentumScore != null)
+    .sort((a, b) => b.momentumScore - a.momentumScore);
+
+  const rankOf = {};
+  ranked.forEach((q, i) => { rankOf[q.symbol] = i; });
+
+  const picks = [];
+  const perRegion = {};
+  const add = (q) => {
+    picks.push(q);
+    perRegion[q.region] = (perRegion[q.region] || 0) + 1;
+  };
+
+  // Eerst behouden wat je al hebt en nog goed genoeg staat.
+  for (const sym of heldSymbols) {
+    if (picks.length >= nPositions) break;
+    const r = rankOf[sym];
+    if (r == null || r >= BUFFER_RANK) continue;
+    add(ranked[r]);
+  }
+
+  for (const q of ranked) {
+    if (picks.length >= nPositions) break;
+    if (picks.some(p => p.symbol === q.symbol)) continue;
+    if ((perRegion[q.region] || 0) >= REGION_CAP) continue;
+    add(q);
+  }
+
+  return picks.sort((a, b) => b.momentumScore - a.momentumScore);
+}
+
+// Haal quotes op voor alle momentum aandelen en sorteer op momentum
 // Inclusief BND (obligaties) voor defensieve verschuiving in ultra modus
 // Alpaca first, Finnhub fallback
 app.get('/api/stocks', async (req, res) => {
@@ -441,10 +588,11 @@ app.get('/api/stocks', async (req, res) => {
       })
     );
 
-    // Sorteer op dagelijkse performance (beste eerst)
-    const sorted = quotes
-      .filter(q => q.changePercent != null)
-      .sort((a, b) => b.changePercent - a.changePercent);
+    // Sorteer op momentum (beste eerst). changePercent blijft meegestuurd
+    // voor de dagweergave in de app, maar bepaalt de volgorde niet meer.
+    const scores = await getMomentumScores();
+    const sorted = withMomentum(quotes.filter(q => q.changePercent != null), scores)
+      .sort((a, b) => (b.momentumScore ?? -Infinity) - (a.momentumScore ?? -Infinity));
 
     res.json(sorted);
   } catch (err) {
@@ -473,8 +621,9 @@ app.get('/api/stocks/top', async (req, res) => {
       })
     );
 
-    const valid = quotes.filter(q => q && q.changePercent != null);
-    const top = valid.sort((a, b) => b.changePercent - a.changePercent).slice(0, count);
+    const scores = await getMomentumScores();
+    const valid = withMomentum(quotes.filter(q => q && q.changePercent != null), scores);
+    const top = selectPositions(valid, count);
 
     res.json(top);
   } catch (err) {
@@ -1032,9 +1181,25 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       });
     }
 
-    const validQuotes = stockQuotes.filter(q => q && q.price && q.changePercent != null);
+    const momentumScores = await getMomentumScores();
+    const validQuotes = withMomentum(
+      stockQuotes.filter(q => q && q.price && q.changePercent != null),
+      momentumScores
+    );
     if (validQuotes.length < 3) {
       return res.json({ action: 'skip', reason: 'Te weinig betrouwbare koersdata' });
+    }
+
+    // Zonder momentumscores niet handelen. Terugvallen op de dagbeweging is
+    // geen veilige noodoplossing — dat was juist de ranking die in de backtest
+    // 70% van de inleg kostte. Liever een cyclus overslaan.
+    const scoredCount = validQuotes.filter(q => q.momentumScore != null).length;
+    if (scoredCount < 3) {
+      return res.json({
+        action: 'skip',
+        reason: 'Momentumdata nog niet beschikbaar — geen trades deze ronde',
+        skipReason: 'Historische koersen konden niet worden opgehaald bij Alpaca',
+      });
     }
 
     // 2. Analyseer markt
@@ -1079,9 +1244,11 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     //    Regel: minimaal 4 posities, maximaal 8, ~$50 per positie als richtlijn.
     const maxPositions = Math.min(8, Math.max(4, Math.floor(availableBudget / 50)));
 
-    const topN = validQuotes
-      .sort((a, b) => b.changePercent - a.changePercent)
-      .slice(0, maxPositions);
+    // Selectie op momentum, met regiomaximum en bufferzone. De bufferzone
+    // kijkt naar wat je nu bezit, zodat een positie niet verkocht wordt om
+    // een verschuiving van een paar plaatsen in de ranglijst.
+    const heldSymbols = positions.filter(p => p.symbol !== 'BND').map(p => p.symbol);
+    const topN = selectPositions(validQuotes, maxPositions, heldSymbols);
     const top8 = topN; // alias om bestaande code niet te breken
 
     const trades = [];

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode } from '../data/portfolioAllocator';
+import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode, selectByMomentum } from '../data/portfolioAllocator';
 
 // Mock quotes
 const mockETFQuotes = [
@@ -137,5 +137,80 @@ describe('getPortfolioTotals', () => {
     expect(totals.totalValue).toBe(800); // inleg + (-200)
     expect(totals.totalGain).toBe(-200);
     expect(totals.isPositive).toBe(false);
+  });
+});
+
+// Quotes met momentumscores en regio's, zoals de server ze nu levert.
+// De dagbeweging staat expres tegengesteld aan het momentum, zodat een test
+// die faalt meteen laat zien op welk van de twee gesorteerd wordt.
+const mockMomentumQuotes = [
+  { symbol: 'NVDA', name: 'NVIDIA', price: 900, changePercent: -2.0, momentumScore: 80, region: 'US' },
+  { symbol: 'MSFT', name: 'Microsoft', price: 420, changePercent: -1.5, momentumScore: 70, region: 'US' },
+  { symbol: 'AAPL', name: 'Apple', price: 180, changePercent: -1.0, momentumScore: 60, region: 'US' },
+  { symbol: 'AMD', name: 'AMD', price: 160, changePercent: -0.5, momentumScore: 50, region: 'US' },
+  { symbol: 'META', name: 'Meta', price: 500, changePercent: 0.5, momentumScore: 40, region: 'US' },
+  { symbol: 'ORCL', name: 'Oracle', price: 200, changePercent: 1.0, momentumScore: 35, region: 'US' },
+  { symbol: 'ASML', name: 'ASML', price: 800, changePercent: 2.0, momentumScore: 30, region: 'EU' },
+  { symbol: 'SAP', name: 'SAP', price: 250, changePercent: 3.0, momentumScore: 20, region: 'EU' },
+  { symbol: 'TSM', name: 'TSMC', price: 180, changePercent: 4.0, momentumScore: 10, region: 'Asia' },
+];
+
+describe('selectByMomentum', () => {
+  it('rangschikt op momentum, niet op dagbeweging', () => {
+    const picks = selectByMomentum(mockMomentumQuotes, 3);
+    expect(picks.map(p => p.symbol)).toEqual(['NVDA', 'MSFT', 'AAPL']);
+  });
+
+  it('houdt maximaal 5 posities per regio aan', () => {
+    const picks = selectByMomentum(mockMomentumQuotes, 8);
+    const amerikaans = picks.filter(p => p.region === 'US');
+    expect(amerikaans.length).toBe(5);
+    // De zesde VS-naam (ORCL) wordt overgeslagen voor Europa en Azie
+    expect(picks.map(p => p.symbol)).not.toContain('ORCL');
+    expect(picks.map(p => p.symbol)).toContain('ASML');
+  });
+
+  it('geeft spreiding over meerdere regios', () => {
+    const picks = selectByMomentum(mockMomentumQuotes, 8);
+    const regios = new Set(picks.map(p => p.region));
+    expect(regios.size).toBeGreaterThan(1);
+  });
+
+  it('respecteert een aangepast regiomaximum', () => {
+    const picks = selectByMomentum(mockMomentumQuotes, 6, 2);
+    expect(picks.filter(p => p.region === 'US').length).toBe(2);
+  });
+
+  it('vraagt nooit meer posities dan gevraagd', () => {
+    expect(selectByMomentum(mockMomentumQuotes, 4).length).toBe(4);
+  });
+
+  const zonderVeld = (quotes, veld) => quotes.map(q => {
+    const kopie = { ...q };
+    delete kopie[veld];
+    return kopie;
+  });
+
+  it('valt terug op dagbeweging als er geen momentumscores zijn', () => {
+    const picks = selectByMomentum(zonderVeld(mockMomentumQuotes, 'momentumScore'), 2);
+    expect(picks.map(p => p.symbol)).toEqual(['TSM', 'SAP']);
+  });
+
+  it('negeert het regiomaximum bij quotes zonder regio', () => {
+    expect(selectByMomentum(zonderVeld(mockMomentumQuotes, 'region'), 8).length).toBe(8);
+  });
+});
+
+describe('buildUltraPortfolio met momentum', () => {
+  it('kiest de aandelen met het hoogste momentum', () => {
+    const portfolio = buildUltraPortfolio(10000, mockMomentumQuotes, null);
+    expect(portfolio[0].symbol).toBe('NVDA');
+    expect(portfolio.map(p => p.symbol)).not.toContain('ORCL');
+  });
+
+  it('investeert nog steeds het volledige bedrag', () => {
+    const portfolio = buildUltraPortfolio(10000, mockMomentumQuotes, null);
+    const totaal = portfolio.reduce((som, p) => som + p.invested, 0);
+    expect(totaal).toBeCloseTo(10000, 2);
   });
 });
