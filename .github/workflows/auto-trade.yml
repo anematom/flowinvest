@@ -94,7 +94,9 @@ jobs:
           antwoord=$(curl -sS --max-time 30 \
             -H "APCA-API-KEY-ID: $KEY" -H "APCA-API-SECRET-KEY: $SECRET" \
             "$BASE/v2/clock")
-          open=$(echo "$antwoord" | jq -r '.is_open // "fout"')
+          # Niet '.is_open // "fout"' gebruiken: de // van jq springt ook bij
+          # false naar het alternatief, en dan lijkt een dichte beurs een fout.
+          open=$(echo "$antwoord" | jq -r 'if has("is_open") then (.is_open | tostring) else "fout" end')
 
           if [ "$open" = "fout" ]; then
             echo "::error::Kon de beursklok niet opvragen — kloppen de keys?"
