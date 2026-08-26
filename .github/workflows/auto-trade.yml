@@ -1,0 +1,147 @@
+name: Auto-trade
+
+# Draait de auto-trade los van de browser.
+#
+# Waarom dit bestaat: de auto-trade werd aangeroepen vanuit een setInterval
+# in Dashboard.jsx. Stond het tabblad niet open, dan handelde er niets — en
+# dan draaiden stop-loss en trailing stop dus ook niet. Deze workflow roept
+# hetzelfde endpoint aan vanaf GitHub, wat meteen de Render-server wakker
+# houdt.
+#
+# Benodigde secrets (Settings > Secrets and variables > Actions > Secrets):
+#   ALPACA_PAPER_KEY / ALPACA_PAPER_SECRET
+#   ALPACA_LIVE_KEY  / ALPACA_LIVE_SECRET   (alleen bij live handelen)
+#
+# Benodigde variables (zelfde scherm, tabblad Variables):
+#   TRADING_ENABLED       'true' zet de hele workflow aan (anders doet hij niets)
+#   LIVE_TRADING_ENABLED  'true' zet handelen met echt geld aan
+#   RISK_PROFILE          bijv. 'ultra' (standaard: ultra)
+#   LIVE_TRADE_AMOUNT     bedrag in dollars; leeg = hele account
+#
+# TRADING_ENABLED is je noodrem. De noodstop in de app zelf staat in het
+# geheugen van de server en verdwijnt bij elke herstart van Render; deze
+# variabele blijft staan.
+
+on:
+  schedule:
+    # Elke 10 minuten op werkdagen, ruim rond de Amerikaanse beursuren
+    # (13:30-20:00 UTC in de zomer, 14:30-21:00 in de winter). Buiten
+    # openingstijd stopt de workflow zelf op basis van Alpaca's klok.
+    - cron: '*/10 13-21 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Alleen kijken of alles bereikbaar is, niet handelen'
+        type: boolean
+        default: true
+
+concurrency:
+  # Nooit twee rondes tegelijk — dat zou dezelfde order dubbel kunnen plaatsen.
+  group: auto-trade
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    env:
+      API: ${{ vars.API_BASE || 'https://flowinvest.onrender.com' }}
+      RISK: ${{ vars.RISK_PROFILE || 'ultra' }}
+
+    steps:
+      - name: Controleer of handelen aan staat
+        run: |
+          if [ "${{ vars.TRADING_ENABLED }}" != "true" ]; then
+            echo "::notice::TRADING_ENABLED staat niet op 'true' — er wordt niet gehandeld."
+            echo "skip=true" >> $GITHUB_ENV
+          fi
+
+      - name: Maak de server wakker
+        if: env.skip != 'true'
+        run: |
+          # Render free tier slaapt na 15 minuten; de eerste aanroep kan een
+          # klein minuut duren. Even blijven proberen voor we conclusies trekken.
+          for poging in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$API/api/health" || echo 000)
+            echo "poging $poging: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "::error::Server niet bereikbaar op $API"
+          exit 1
+
+      - name: Staat de beurs open?
+        if: env.skip != 'true'
+        env:
+          KEY: ${{ secrets.ALPACA_PAPER_KEY || secrets.ALPACA_LIVE_KEY }}
+          SECRET: ${{ secrets.ALPACA_PAPER_SECRET || secrets.ALPACA_LIVE_SECRET }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Geen Alpaca-keys als secret ingesteld."
+            exit 1
+          fi
+          open=$(curl -sS --max-time 30 \
+            -H "APCA-API-KEY-ID: $KEY" -H "APCA-API-SECRET-KEY: $SECRET" \
+            "https://paper-api.alpaca.markets/v2/clock" | jq -r '.is_open')
+          echo "Beurs open: $open"
+          if [ "$open" != "true" ]; then
+            echo "::notice::Beurs gesloten — geen trades deze ronde."
+            echo "skip=true" >> $GITHUB_ENV
+          fi
+
+      - name: Paper trading
+        if: env.skip != 'true' && inputs.dry_run != true
+        env:
+          KEY: ${{ secrets.ALPACA_PAPER_KEY }}
+          SECRET: ${{ secrets.ALPACA_PAPER_SECRET }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::notice::Geen paper-keys ingesteld, overgeslagen."
+            exit 0
+          fi
+          body=$(jq -nc --arg r "$RISK" --arg k "$KEY" --arg s "$SECRET" \
+            '{risk:$r, alpacaKeys:{apiKey:$k, secretKey:$s, live:false}}')
+          # Body via stdin zodat de sleutels niet in de proceslijst belanden.
+          echo "$body" | curl -sS --max-time 300 -X POST \
+            -H 'Content-Type: application/json' --data-binary @- \
+            "$API/api/alpaca/auto-trade" > antwoord.json
+          jq '{action, reason, skipReason, trades: (.trades // [] | length)}' antwoord.json
+
+      - name: Live trading
+        if: env.skip != 'true' && inputs.dry_run != true && vars.LIVE_TRADING_ENABLED == 'true'
+        env:
+          KEY: ${{ secrets.ALPACA_LIVE_KEY }}
+          SECRET: ${{ secrets.ALPACA_LIVE_SECRET }}
+          BEDRAG: ${{ vars.LIVE_TRADE_AMOUNT }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::LIVE_TRADING_ENABLED staat aan maar ALPACA_LIVE_KEY ontbreekt."
+            exit 1
+          fi
+          if [ -n "$BEDRAG" ]; then
+            body=$(jq -nc --arg r "$RISK" --arg k "$KEY" --arg s "$SECRET" --argjson a "$BEDRAG" \
+              '{risk:$r, amount:$a, alpacaKeys:{apiKey:$k, secretKey:$s, live:true}}')
+          else
+            body=$(jq -nc --arg r "$RISK" --arg k "$KEY" --arg s "$SECRET" \
+              '{risk:$r, alpacaKeys:{apiKey:$k, secretKey:$s, live:true}}')
+          fi
+          echo "$body" | curl -sS --max-time 300 -X POST \
+            -H 'Content-Type: application/json' --data-binary @- \
+            "$API/api/alpaca/auto-trade" > antwoord.json
+
+          jq '{action, reason, skipReason, trades: (.trades // [] | length)}' antwoord.json
+
+          # Laat de workflow falen bij een echt probleem, zodat GitHub je mailt.
+          actie=$(jq -r '.action // "onbekend"' antwoord.json)
+          case "$actie" in
+            stopped) echo "::warning::Noodstop actief in de app — er is niet gehandeld." ;;
+            skip)    echo "::warning::Ronde overgeslagen: $(jq -r '.reason' antwoord.json)" ;;
+            onbekend) echo "::error::Onverwacht antwoord van de server."; cat antwoord.json; exit 1 ;;
+          esac
+
+      - name: Toon gedane trades
+        if: always() && env.skip != 'true' && inputs.dry_run != true
+        run: |
+          [ -f antwoord.json ] || exit 0
+          aantal=$(jq '.trades // [] | length' antwoord.json)
+          echo "### Auto-trade: $aantal trades" >> $GITHUB_STEP_SUMMARY
+          jq -r '.trades // [] | .[] | "- \(.action) \(.symbol) — \(.reason)"' antwoord.json >> $GITHUB_STEP_SUMMARY

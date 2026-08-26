@@ -1058,7 +1058,14 @@ app.post('/api/alpaca/debug-status', async (req, res) => {
   }
 });
 
+// Voorkomt dat twee rondes tegelijk lopen voor hetzelfde account. De app
+// roept dit elke 10 minuten aan vanuit de browser en de GitHub Actions cron
+// doet hetzelfde; zonder deze grendel kunnen die elkaar overlappen en dezelfde
+// positie dubbel kopen.
+const autoTradeRunning = new Set();
+
 app.post('/api/alpaca/auto-trade', async (req, res) => {
+  let lockKey = null;
   try {
     // Noodstop check
     if (emergencyStop) {
@@ -1075,6 +1082,18 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     if (!useKey || !useSecret) {
       return res.json({ action: 'skip', reason: 'Geen Alpaca keys geconfigureerd', trades: [] });
     }
+
+    // Paper en live zijn aparte accounts en mogen elkaar niet blokkeren.
+    lockKey = `${useKey}:${isLive ? 'live' : 'paper'}`;
+    if (autoTradeRunning.has(lockKey)) {
+      console.log(`Auto-trade: ronde overgeslagen, er loopt er al een (${isLive ? 'live' : 'paper'})`);
+      return res.json({
+        action: 'skip',
+        reason: 'Er loopt al een auto-trade ronde voor dit account',
+        trades: [],
+      });
+    }
+    autoTradeRunning.add(lockKey);
 
     // User-specifieke Alpaca fetch
     async function userAlpacaFetch(endpoint, options = {}) {
@@ -1488,6 +1507,10 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  } finally {
+    // Altijd vrijgeven, ook bij een fout — anders blijft het account
+    // permanent geblokkeerd tot de server herstart.
+    if (lockKey) autoTradeRunning.delete(lockKey);
   }
 });
 
