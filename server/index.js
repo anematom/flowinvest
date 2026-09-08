@@ -429,7 +429,10 @@ const REGION_CAP = 5;
 // Voorkomt ruilen om een verschuiving van een paar plaatsen.
 const BUFFER_RANK = 12;
 
-let momentumCache = { at: 0, scores: {} };
+// Naast de scores bewaren we de ruwe dagkoersen. De trailing stop had ze
+// nodig en haalde ze eerder uit een variabele in het geheugen, die bij elke
+// herstart van Render leegliep.
+let momentumCache = { at: 0, scores: {}, bars: {} };
 
 async function fetchDailyBars(symbols) {
   const key = ALPACA_KEY || process.env.ALPACA_KEY;
@@ -498,7 +501,7 @@ async function getMomentumScores() {
       if (score != null) scores[sym] = score;
     }
     if (Object.keys(scores).length > 0) {
-      momentumCache = { at: Date.now(), scores };
+      momentumCache = { at: Date.now(), scores, bars };
       console.log(`Momentum: ${Object.keys(scores).length} scores ververst`);
     }
   } catch (err) {
@@ -507,6 +510,18 @@ async function getMomentumScores() {
   // Bij een storing de laatst bekende scores gebruiken; die zijn hooguit een
   // dag oud en nog altijd bruikbaarder dan terugvallen op dagbewegingen.
   return momentumCache.scores;
+}
+
+// Hoogste slotkoers van de afgelopen N handelsdagen, uit de opgehaalde bars.
+// Levert null als er geen data is; de aanroeper valt dan terug op het
+// geheugen.
+function hoogsteKoersUitHistorie(symbol, dagen = 60) {
+  const bars = momentumCache.bars?.[symbol];
+  if (!bars || bars.length === 0) return null;
+  const recent = bars.slice(-dagen);
+  let hoog = 0;
+  for (const b of recent) if (b.c > hoog) hoog = b.c;
+  return hoog > 0 ? hoog : null;
 }
 
 function withMomentum(quotes, scores) {
@@ -1394,12 +1409,23 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       const costBasis = parseFloat(pos.cost_basis);
       const marketValue = parseFloat(pos.market_value);
 
-      // Update high watermark for trailing stop
+      // Hoogste stand bepalen. Het geheugen alleen is onbetrouwbaar: Render
+      // herstart vaak en dan begint de meting opnieuw bij de koers van dat
+      // moment, waardoor de trailing stop stilzwijgend uit staat. De
+      // koershistorie overleeft een herstart wel, dus we nemen de hoogste
+      // van beide.
       const key = symbol + '_' + useKey;
       if (!highWatermarks[key] || currentPrice > highWatermarks[key]) highWatermarks[key] = currentPrice;
-      const dropFromHigh = ((currentPrice - highWatermarks[key]) / highWatermarks[key]) * 100;
+      const uitHistorie = hoogsteKoersUitHistorie(symbol);
+      const hoogsteStand = Math.max(highWatermarks[key], uitHistorie || 0);
+      highWatermarks[key] = hoogsteStand;
+      const dropFromHigh = ((currentPrice - hoogsteStand) / hoogsteStand) * 100;
 
-      // Trailing stop: if price dropped 15% from high watermark while still in profit
+      // Trailing stop: 15% gezakt vanaf de hoogste stand, en nog in de plus.
+      // De vaste stop-loss hieronder meet vanaf je aankoopprijs en wordt
+      // daardoor slapper naarmate een positie meer is gestegen; bij +300%
+      // moet hij 79% dalen voor die afgaat. Deze trailing stop is dus de
+      // eigenlijke bescherming voor gegroeide posities.
       if (dropFromHigh <= -15 && plPercent > 0) {
         try {
           const result = await userPlaceOrder(
