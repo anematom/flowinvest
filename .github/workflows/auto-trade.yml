@@ -169,18 +169,42 @@ jobs:
             body=$(jq -nc --arg r "$RISK" --arg k "$KEY" --arg s "$SECRET" \
               '{risk:$r, alpacaKeys:{apiKey:$k, secretKey:$s, live:true}}')
           fi
+          # Losse exitcode, zodat een mislukte aanroep te onderscheiden is van
+          # een server die netjes antwoordt met een foutmelding.
+          curlcode=0
           echo "$body" | curl -sS --max-time 300 -X POST \
             -H 'Content-Type: application/json' --data-binary @- \
-            "$API/api/alpaca/auto-trade" > antwoord.json
+            "$API/api/alpaca/auto-trade" > antwoord.json || curlcode=$?
+
+          if [ "$curlcode" != "0" ]; then
+            echo "### Live trading: aanroep mislukt" >> $GITHUB_STEP_SUMMARY
+            echo "curl gaf exitcode $curlcode (28 = time-out na 300s)." >> $GITHUB_STEP_SUMMARY
+            echo "::error::Server reageerde niet (curl $curlcode)."
+            exit 1
+          fi
+
+          if ! jq -e 'has("action")' antwoord.json >/dev/null 2>&1; then
+            # De server geeft bij een uitzondering {"error": "..."} zonder action.
+            # Die tekst is de enige aanwijzing wat er misging, dus zet hem waar
+            # je hem ziet zonder de logs open te klappen.
+            {
+              echo "### Live trading: server gaf een fout"
+              echo '```'
+              head -c 2000 antwoord.json
+              echo
+              echo '```'
+            } >> $GITHUB_STEP_SUMMARY
+            echo "::error::Server gaf een fout: $(jq -r '.error // .' antwoord.json | head -c 300)"
+            exit 1
+          fi
 
           jq '{action, reason, skipReason, trades: (.trades // [] | length)}' antwoord.json
 
-          # Laat de workflow falen bij een echt probleem, zodat GitHub je mailt.
-          actie=$(jq -r '.action // "onbekend"' antwoord.json)
+          actie=$(jq -r '.action' antwoord.json)
           case "$actie" in
             stopped) echo "::warning::Noodstop actief in de app — er is niet gehandeld." ;;
             skip)    echo "::warning::Ronde overgeslagen: $(jq -r '.reason' antwoord.json)" ;;
-            onbekend) echo "::error::Onverwacht antwoord van de server."; cat antwoord.json; exit 1 ;;
+            waiting) echo "::warning::$(jq -r '.reason' antwoord.json)" ;;
           esac
 
       - name: Toon gedane trades
