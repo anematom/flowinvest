@@ -91,7 +91,31 @@ jobs:
             echo "$antwoord" | jq -r '.message // .'
             exit 1
           fi
-          echo "Live account bereikbaar — waarde: \$$(echo "$antwoord" | jq -r '.equity')"
+
+          echo "$antwoord" | jq -r '
+            "Live account bereikbaar",
+            "  waarde:            $\(.equity)",
+            "  vrij te besteden:  $\(.cash)",
+            "  status:            \(.status)",
+            "  handel geblokkeerd: \(.trading_blocked)",
+            "  account geblokkeerd:\(.account_blocked)",
+            "  daytrades (5 dgn): \(.daytrade_count // "?")",
+            "  soort account:     \(if (.multiplier|tonumber) > 1 then "margin" else "cash" end)"'
+
+          # Een account onder $25.000 mag maar 3 daytrades per 5 werkdagen doen.
+          # Daarboven blokkeert Alpaca verdere orders, en dat is precies het soort
+          # storing dat je niet pas wilt ontdekken als er echt geld in beweegt.
+          blocked=$(echo "$antwoord" | jq -r '.trading_blocked')
+          if [ "$blocked" = "true" ]; then
+            echo "::error::Alpaca blokkeert het handelen op dit account."
+            exit 1
+          fi
+
+          dt=$(echo "$antwoord" | jq -r '.daytrade_count // 0')
+          eq=$(echo "$antwoord" | jq -r '.equity | tonumber | floor')
+          if [ "$eq" -lt 25000 ] && [ "$dt" -ge 3 ]; then
+            echo "::warning::$dt daytrades in 5 dagen bij een account onder \$25.000 — Alpaca kan orders weigeren."
+          fi
 
       - name: Staat de beurs open?
         if: env.skip != 'true'
