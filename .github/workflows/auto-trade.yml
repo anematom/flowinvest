@@ -69,6 +69,30 @@ jobs:
           echo "::error::Server niet bereikbaar op $API"
           exit 1
 
+      - name: Controleer de live sleutels
+        # Voor de klokcontrole, zodat dit ook buiten beursuren draait: dan kun
+        # je met een handmatige dry run testen of de sleutels kloppen zonder
+        # tot de volgende beursdag te wachten.
+        if: env.skip != 'true' && vars.LIVE_TRADING_ENABLED == 'true'
+        env:
+          KEY: ${{ secrets.ALPACA_LIVE_KEY }}
+          SECRET: ${{ secrets.ALPACA_LIVE_SECRET }}
+        run: |
+          if [ -z "$KEY" ] || [ -z "$SECRET" ]; then
+            echo "::error::LIVE_TRADING_ENABLED staat aan maar ALPACA_LIVE_KEY of _SECRET ontbreekt."
+            exit 1
+          fi
+          antwoord=$(curl -sS --max-time 30 \
+            -H "APCA-API-KEY-ID: $KEY" -H "APCA-API-SECRET-KEY: $SECRET" \
+            "https://api.alpaca.markets/v2/account")
+
+          if ! echo "$antwoord" | jq -e 'has("equity")' >/dev/null 2>&1; then
+            echo "::error::Live sleutels werken niet. Zijn het echt live keys en geen paper keys?"
+            echo "$antwoord" | jq -r '.message // .'
+            exit 1
+          fi
+          echo "Live account bereikbaar — waarde: \$$(echo "$antwoord" | jq -r '.equity')"
+
       - name: Staat de beurs open?
         if: env.skip != 'true'
         env:
