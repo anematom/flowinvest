@@ -207,10 +207,10 @@ jobs:
             exit 1
           fi
 
-          if ! jq -e 'has("action")' antwoord.json >/dev/null 2>&1; then
-            # De server geeft bij een uitzondering {"error": "..."} zonder action.
-            # Die tekst is de enige aanwijzing wat er misging, dus zet hem waar
-            # je hem ziet zonder de logs open te klappen.
+          if jq -e 'has("error")' antwoord.json >/dev/null 2>&1; then
+            # Bij een uitzondering geeft de server {"error": "..."}. Die tekst is
+            # de enige aanwijzing wat er misging, dus zet hem waar je hem ziet
+            # zonder de job-logs open te klappen.
             {
               echo "### Live trading: server gaf een fout"
               echo '```'
@@ -218,17 +218,24 @@ jobs:
               echo
               echo '```'
             } >> $GITHUB_STEP_SUMMARY
-            echo "::error::Server gaf een fout: $(jq -r '.error // .' antwoord.json | head -c 300)"
+            echo "::error::Server gaf een fout: $(jq -r '.error' antwoord.json | head -c 300)"
             exit 1
           fi
 
-          jq '{action, reason, skipReason, trades: (.trades // [] | length)}' antwoord.json
-
-          actie=$(jq -r '.action' antwoord.json)
+          # Een geslaagde ronde bevat GEEN action-veld; dat zit alleen op de
+          # gevallen waarin de server vroegtijdig stopt (stopped/skip/waiting).
+          # Action als verplicht behandelen las een geslaagde ronde als storing.
+          actie=$(jq -r '.action // "gehandeld"' antwoord.json)
           case "$actie" in
+            gehandeld)
+              aantal=$(jq -r '.trades // [] | length' antwoord.json)
+              echo "Ronde afgerond — $aantal trades"
+              jq -r '.trades // [] | .[] | "  \(.action) \(.symbol): \(.reason)"' antwoord.json
+              ;;
             stopped) echo "::warning::Noodstop actief in de app — er is niet gehandeld." ;;
             skip)    echo "::warning::Ronde overgeslagen: $(jq -r '.reason' antwoord.json)" ;;
             waiting) echo "::warning::$(jq -r '.reason' antwoord.json)" ;;
+            *)       echo "::warning::Onbekende status '$actie'"; cat antwoord.json ;;
           esac
 
       - name: Toon gedane trades
