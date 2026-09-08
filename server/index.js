@@ -1332,58 +1332,86 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     // ========================================
     // INDEXPROFIEL
     // ========================================
-    // Koopt alleen bij met vrij geld en verkoopt nooit. Staat bewust voor de
-    // hele momentum- en beschermingslogica: die hoort hier niet bij te komen.
+    // Zet bestaande posities eenmalig om naar het wereldfonds, koopt daarna
+    // alleen nog bij met vrij geld, en verkoopt nooit meer. Staat bewust voor
+    // de hele momentum- en beschermingslogica: die hoort hier niet bij te komen.
+    //
+    // Let op bij het aanzetten: de eerste ronde verkoopt ALLES wat geen VT is.
+    // Dat is bedoeld — het is de overstap — maar het is onomkeerbaar.
     //
     // In de backtest kostten stop-loss en trailing stop op een wereldindex
     // 3,9 procentpunt per jaar — acht keer uitstappen in negen jaar. De
     // spreiding over 9.000 bedrijven is de bescherming; er hoeft niets
     // omheen. Zie flowinvest-daytrading/index-met-beveiliging.mjs.
     if (risk === 'index') {
+      const indexTrades = [];
+
+      // Stap 1 — overstappen. Alles wat geen VT is wordt eenmalig omgezet.
+      // Dit is geen reactie op koersen maar een verhuizing naar het doelfonds;
+      // zodra alles in VT zit gebeurt er nooit meer een verkoop.
+      const teVerkopen = positions.filter(p => p.symbol !== INDEX_SYMBOL);
+      for (const pos of teVerkopen) {
+        try {
+          const result = await userPlaceOrder(
+            { symbol: pos.symbol, qty: pos.qty, side: 'sell', type: 'market', time_in_force: 'day' },
+            `Overstap naar indexbeleggen: ${pos.symbol} omgezet naar ${INDEX_SYMBOL}`
+          );
+          if (!result.skipped) {
+            indexTrades.push({
+              symbol: pos.symbol, action: 'OVERSTAP',
+              reason: `Omgezet naar ${INDEX_SYMBOL}`, amount: pos.qty,
+            });
+          }
+        } catch (e) {
+          console.error(`Overstap: verkoop ${pos.symbol} mislukt:`, e.message);
+        }
+      }
+
+      // Bij een verkoop even wachten zodat Alpaca de opbrengst kan verwerken.
+      if (teVerkopen.length > 0) await new Promise(r => setTimeout(r, 4000));
+
+      const naVerkoop = await userAlpacaFetch('/account').catch(() => account);
+
+      // Op een cash account settelt verkoopopbrengst pas de volgende dag, dus
+      // is niet alles meteen te besteden. Wat overblijft wordt de volgende
+      // ronde opgepakt; daarom is dit geen fout maar gewoon een tussenstand.
       const teBesteden = Math.max(0, Math.min(
-        parseFloat(account.cash),
-        parseFloat(account.non_marginable_buying_power || account.buying_power || account.cash)
+        parseFloat(naVerkoop.cash),
+        parseFloat(naVerkoop.non_marginable_buying_power ?? naVerkoop.buying_power ?? naVerkoop.cash)
       ));
 
-      // Alpaca weigert orders onder een dollar; dan wachten we tot de
-      // volgende storting in plaats van te blijven proberen.
-      if (teBesteden < 1) {
-        return res.json({
-          mode: 'index',
-          reason: `Niets te doen — geen vrij geld om bij te kopen (${teBesteden.toFixed(2)} beschikbaar)`,
-          trades: [],
-          equity: parseFloat(account.equity),
-          cash: parseFloat(account.cash),
-          holdings: positions.map(p => ({ symbol: p.symbol, value: parseFloat(p.market_value) })),
-        });
-      }
-
-      const indexTrades = [];
-      try {
-        const result = await userPlaceOrder(
-          { symbol: INDEX_SYMBOL, notional: teBesteden.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
-          `Indexbeleggen: $${teBesteden.toFixed(2)} bijgekocht`
-        );
-        if (!result.skipped) {
-          indexTrades.push({
-            symbol: INDEX_SYMBOL, action: 'KOOP',
-            reason: 'Maandelijkse inleg belegd in wereldindex',
-            amount: `$${teBesteden.toFixed(2)}`,
-          });
+      // Stap 2 — bijkopen met wat er vrij staat. Alpaca weigert orders onder
+      // een dollar, dus daaronder wachten we op de volgende ronde of storting.
+      if (teBesteden >= 1) {
+        try {
+          const result = await userPlaceOrder(
+            { symbol: INDEX_SYMBOL, notional: teBesteden.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
+            `Indexbeleggen: $${teBesteden.toFixed(2)} bijgekocht`
+          );
+          if (!result.skipped) {
+            indexTrades.push({
+              symbol: INDEX_SYMBOL, action: 'KOOP',
+              reason: teVerkopen.length > 0 ? 'Opbrengst belegd in wereldindex' : 'Inleg belegd in wereldindex',
+              amount: `$${teBesteden.toFixed(2)}`,
+            });
+          }
+        } catch (e) {
+          console.error('Indexaankoop mislukt:', e.message);
+          return res.status(500).json({ error: `Indexaankoop mislukt: ${e.message}` });
         }
-      } catch (e) {
-        console.error('Indexaankoop mislukt:', e.message);
-        return res.status(500).json({ error: `Indexaankoop mislukt: ${e.message}` });
       }
 
+      const nogOm = teVerkopen.length > 0 && teBesteden < 1;
       return res.json({
         mode: 'index',
-        reason: indexTrades.length
-          ? `$${teBesteden.toFixed(2)} belegd in ${INDEX_SYMBOL}`
-          : 'Order overgeslagen',
+        reason: indexTrades.length === 0
+          ? `Niets te doen — geen vrij geld om bij te kopen ($${teBesteden.toFixed(2)} beschikbaar)`
+          : nogOm
+            ? `${teVerkopen.length} posities verkocht; opbrengst wordt volgende ronde belegd zodra die vrijkomt`
+            : `$${teBesteden.toFixed(2)} belegd in ${INDEX_SYMBOL}`,
         trades: indexTrades,
-        equity: parseFloat(account.equity),
-        cash: parseFloat(account.cash),
+        equity: parseFloat(naVerkoop.equity),
+        cash: parseFloat(naVerkoop.cash),
         holdings: positions.map(p => ({ symbol: p.symbol, value: parseFloat(p.market_value) })),
       });
     }
