@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPortfolio, buildUltraPortfolio, getPortfolioTotals, isUltraMode, selectByMomentum } from '../data/portfolioAllocator';
+import { buildPortfolio, buildUltraPortfolio, buildIndexPortfolio, getPortfolioTotals, isUltraMode, isIndexMode, selectByMomentum } from '../data/portfolioAllocator';
 
 // Mock quotes
 const mockETFQuotes = [
@@ -212,5 +212,45 @@ describe('buildUltraPortfolio met momentum', () => {
     const portfolio = buildUltraPortfolio(10000, mockMomentumQuotes, null);
     const totaal = portfolio.reduce((som, p) => som + p.invested, 0);
     expect(totaal).toBeCloseTo(10000, 2);
+  });
+});
+
+describe('buildIndexPortfolio', () => {
+  const quotes = [
+    { symbol: 'VT', price: 120, changePercent: 0.4 },
+    { symbol: 'SPY', price: 500, changePercent: 0.3 },
+  ];
+
+  it('zet alles in een wereldwijd fonds', () => {
+    const p = buildIndexPortfolio(10000, quotes);
+    expect(p.length).toBe(1);
+    expect(p[0].symbol).toBe('VT');
+    expect(p[0].weight).toBe(1);
+  });
+
+  it('belegt het volledige bedrag', () => {
+    const p = buildIndexPortfolio(10000, quotes);
+    expect(p[0].invested).toBe(10000);
+    expect(p[0].shares).toBeCloseTo(10000 / 120, 6);
+  });
+
+  it('geeft niets terug als het fonds ontbreekt in de koersen', () => {
+    expect(buildIndexPortfolio(10000, [{ symbol: 'SPY', price: 500 }])).toEqual([]);
+    expect(buildIndexPortfolio(10000, [])).toEqual([]);
+  });
+});
+
+describe('isIndexMode', () => {
+  it('herkent het indexprofiel', () => {
+    expect(isIndexMode('index')).toBe(true);
+  });
+  it('verwart het niet met andere profielen', () => {
+    ['low', 'medium', 'high', 'ultra', 'crypto'].forEach(r => {
+      expect(isIndexMode(r)).toBe(false);
+    });
+  });
+  it('sluit ultra en index wederzijds uit', () => {
+    expect(isUltraMode('index')).toBe(false);
+    expect(isIndexMode('ultra')).toBe(false);
   });
 });

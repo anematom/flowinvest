@@ -52,13 +52,14 @@ const riskOptions = [
   { value: 'medium', label: 'Gebalanceerd', desc: 'Balans tussen groei en stabiliteit', color: '#FF9800' },
   { value: 'high', label: 'Ambitieus', desc: 'Meer groei, meer schommelingen', color: '#F44336' },
   { value: 'ultra', label: 'Maximaal', desc: 'Losse aandelen — hoogste groeipotentie', color: '#9C27B0' },
+  { value: 'index', label: 'Indexfonds', desc: 'Wereldwijd spreiden, maandelijks bijkopen, nooit verkopen', color: '#0277BD' },
 ];
 
 // Aanbevolen risicoprofiel op basis van doel + horizon
 const riskAdvice = {
   starter: { '1-3': 'low', '3-10': 'medium', '10-20': 'high', '20+': 'high' },
   target: { '1-3': 'low', '3-10': 'medium', '10-20': 'high', '20+': 'high' },
-  future: { '1-3': 'medium', '3-10': 'high', '10-20': 'ultra', '20+': 'ultra' },
+  future: { '1-3': 'medium', '3-10': 'high', '10-20': 'index', '20+': 'index' },
   idle: { '1-3': 'low', '3-10': 'low', '10-20': 'medium', '20+': 'medium' },
 };
 

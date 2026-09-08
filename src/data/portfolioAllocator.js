@@ -22,7 +22,52 @@ const allocations = {
     { symbol: 'VGK', name: 'Europese aandelen', weight: 0.15 },
   ],
   // Ultra modus wordt dynamisch gebouwd op basis van momentum
+  // Index modus staat hieronder apart: een enkel wereldwijd fonds
 };
+
+// Indexbeleggen: alles in een wereldwijd gespreid fonds, en verder niets doen.
+//
+// VT bevat ruim 9.000 bedrijven uit ontwikkelde en opkomende markten en weegt
+// ze naar grootte. Winnaars groeien er vanzelf in, verliezers verdwijnen —
+// zonder dat er iets verhandeld hoeft te worden.
+//
+// Bewust GEEN stop-loss of trailing stop. Backtest 2017-2026 met maandelijkse
+// inleg (flowinvest-daytrading/index-met-beveiliging.mjs):
+//   gewoon kopen en houden      13,8% per jaar, eindbedrag EUR 59.462
+//   met stop-loss + trailing     9,9% per jaar, eindbedrag EUR 48.455
+// De beveiligingen verkopen na de daling en kopen terug na de stijging. Acht
+// keer uitstappen in negen jaar kostte een vijfde van het vermogen. Bij een
+// index is de spreiding zelf de bescherming.
+export const INDEX_FONDS = {
+  symbol: 'VT',
+  name: 'Wereldwijd indexfonds',
+  description: 'Ruim 9.000 bedrijven wereldwijd — Vanguard Total World',
+};
+
+export function isIndexMode(riskLevel) {
+  return riskLevel === 'index';
+}
+
+// Alles in een fonds. Aparte functie zodat de andere profielen niet wijzigen.
+export function buildIndexPortfolio(amount, quotes) {
+  const quote = quotes?.find(q => q.symbol === INDEX_FONDS.symbol);
+  if (!quote || !quote.price) return [];
+
+  const shares = amount / quote.price;
+  const currentValue = shares * quote.price;
+  return [{
+    ...INDEX_FONDS,
+    weight: 1,
+    rank: 1,
+    shares,
+    invested: amount,
+    currentValue,
+    gain: currentValue - amount,
+    gainPercent: 0,
+    price: quote.price,
+    changePercent: quote.changePercent,
+  }];
+}
 
 // Bereken hoeveel "shares" je koopt met je startbedrag
 export function buildPortfolio(amount, riskLevel, quotes) {

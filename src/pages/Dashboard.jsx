@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { fetchPortfolio, fetchStocks, fetchCrypto, fetchStockHistory, fetchAlpacaAccount, fetchAlpacaPositions, fetchAlpacaDeposits, alpacaAutoTrade, alpacaEmergencyStop, alpacaEmergencyResume, fetchEmergencyStatus } from '../data/marketApi';
 import { loadPortfolioHoldings, savePortfolioHoldings } from '../data/supabase';
-import { buildPortfolio, buildUltraPortfolio, buildCryptoPortfolio, getPortfolioTotals, isUltraMode, isCryptoMode } from '../data/portfolioAllocator';
+import { buildPortfolio, buildUltraPortfolio, buildCryptoPortfolio, buildIndexPortfolio, getPortfolioTotals, isUltraMode, isCryptoMode, isIndexMode } from '../data/portfolioAllocator';
 import {
   analyzeMarket,
   analyzeUltraMarket,
@@ -335,6 +335,22 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         }]);
 
         if (portfolio) runTechnicalAnalysis(portfolio);
+      } else if (isIndexMode(settings.risk)) {
+        // === INDEX MODUS: een wereldwijd fonds, kopen en vasthouden ===
+        // Geen technische analyse, geen stop-loss, geen herweging. Alles wat
+        // hier zou reageren op koersbewegingen kostte in de backtest geld.
+        const quotes = await fetchPortfolio();
+        const portfolio = buildIndexPortfolio(settings.amount, quotes);
+        if (portfolio.length === 0) {
+          console.warn('Indexfonds nog niet beschikbaar in de koersdata, overslaan');
+          return;
+        }
+        setVirtualPortfolio(portfolio);
+        const totals = getPortfolioTotals(portfolio, settings.amount);
+        setHistory(h => [...h.slice(-199), {
+          date: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          value: parseFloat(totals.totalValue.toFixed(2)),
+        }]);
       } else if (isUltraMode(settings.risk)) {
         // === ULTRA MODUS: Losse aandelen ===
         const stockQuotes = await fetchStocks();

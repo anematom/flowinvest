@@ -87,7 +87,13 @@ const DEFAULT_ETFS = [
   { symbol: 'VXUS', name: 'International ETF', description: 'Internationale markten (ex-US)' },
   { symbol: 'BND', name: 'Total Bond Market', description: 'Obligaties — stabiel en veilig' },
   { symbol: 'VGK', name: 'European Stocks', description: 'Europese aandelen' },
+  { symbol: 'VT', name: 'Wereldwijd indexfonds', description: 'Ruim 9.000 bedrijven wereldwijd — Vanguard Total World' },
 ];
+
+// Indexprofiel: alles in een wereldwijd fonds, maandelijks bijkopen, nooit
+// verkopen. Zie de toelichting bij INDEX_FONDS in portfolioAllocator.js voor
+// waarom hier bewust geen stop-loss of trailing stop op zit.
+const INDEX_SYMBOL = 'VT';
 
 // ============================================
 // ROUTES
@@ -1320,6 +1326,65 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
         trades: [],
         cash: accountCash,
         equity: accountEquity,
+      });
+    }
+
+    // ========================================
+    // INDEXPROFIEL
+    // ========================================
+    // Koopt alleen bij met vrij geld en verkoopt nooit. Staat bewust voor de
+    // hele momentum- en beschermingslogica: die hoort hier niet bij te komen.
+    //
+    // In de backtest kostten stop-loss en trailing stop op een wereldindex
+    // 3,9 procentpunt per jaar — acht keer uitstappen in negen jaar. De
+    // spreiding over 9.000 bedrijven is de bescherming; er hoeft niets
+    // omheen. Zie flowinvest-daytrading/index-met-beveiliging.mjs.
+    if (risk === 'index') {
+      const teBesteden = Math.max(0, Math.min(
+        parseFloat(account.cash),
+        parseFloat(account.non_marginable_buying_power || account.buying_power || account.cash)
+      ));
+
+      // Alpaca weigert orders onder een dollar; dan wachten we tot de
+      // volgende storting in plaats van te blijven proberen.
+      if (teBesteden < 1) {
+        return res.json({
+          mode: 'index',
+          reason: `Niets te doen — geen vrij geld om bij te kopen (${teBesteden.toFixed(2)} beschikbaar)`,
+          trades: [],
+          equity: parseFloat(account.equity),
+          cash: parseFloat(account.cash),
+          holdings: positions.map(p => ({ symbol: p.symbol, value: parseFloat(p.market_value) })),
+        });
+      }
+
+      const indexTrades = [];
+      try {
+        const result = await userPlaceOrder(
+          { symbol: INDEX_SYMBOL, notional: teBesteden.toFixed(2), side: 'buy', type: 'market', time_in_force: 'day' },
+          `Indexbeleggen: $${teBesteden.toFixed(2)} bijgekocht`
+        );
+        if (!result.skipped) {
+          indexTrades.push({
+            symbol: INDEX_SYMBOL, action: 'KOOP',
+            reason: 'Maandelijkse inleg belegd in wereldindex',
+            amount: `$${teBesteden.toFixed(2)}`,
+          });
+        }
+      } catch (e) {
+        console.error('Indexaankoop mislukt:', e.message);
+        return res.status(500).json({ error: `Indexaankoop mislukt: ${e.message}` });
+      }
+
+      return res.json({
+        mode: 'index',
+        reason: indexTrades.length
+          ? `$${teBesteden.toFixed(2)} belegd in ${INDEX_SYMBOL}`
+          : 'Order overgeslagen',
+        trades: indexTrades,
+        equity: parseFloat(account.equity),
+        cash: parseFloat(account.cash),
+        holdings: positions.map(p => ({ symbol: p.symbol, value: parseFloat(p.market_value) })),
       });
     }
 
