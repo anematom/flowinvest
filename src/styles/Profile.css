@@ -472,3 +472,33 @@
 .logout-btn:hover {
   background: #FFEBEE;
 }
+
+/* Sleutels bijwerken — zelfde vormtaal als de andere knoppen op deze pagina,
+   maar rustiger omdat het geen hoofdactie is. */
+.keys-btn {
+  flex: 1 1 160px;
+  padding: 11px 14px;
+  background: #F5F7F9;
+  border: 1px solid #CFD8DC;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  color: #37474F;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.keys-btn:hover {
+  background: #ECEFF1;
+  border-color: #B0BEC5;
+}
+
+.keys-btn.live {
+  border-color: #FFB74D;
+  color: #E65100;
+}
+
+.keys-btn.live:hover {
+  background: #FFF3E0;
+}

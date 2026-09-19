@@ -14,7 +14,7 @@ const modeColors = {
   live: '#4CAF50',
 };
 
-export default function Profile({ user, portfolios, activeIndex, alpacaConnected, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio }) {
+export default function Profile({ user, portfolios, activeIndex, alpacaConnected, onNavigate, onLogout, onUpdatePortfolios, onDeletePortfolio, onAddPortfolio, onSwitchPortfolio, onUpdateKeys }) {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
@@ -100,6 +100,29 @@ export default function Profile({ user, portfolios, activeIndex, alpacaConnected
           <span className="broker-status-desc">{alpacaConnected ? 'Je kunt paper trading en live trading gebruiken' : 'Verbind een broker om echt te beleggen'}</span>
         </div>
       </div>
+
+      {/* Sleutels bijwerken. Dit kon eerder alleen bij het aanmaken van een
+          nieuw portfolio, waardoor je vastzat als een sleutel niet meer klopte. */}
+      {onUpdateKeys && (
+        <div className="profile-card" style={{ marginTop: 12 }}>
+          <div className="profile-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+            <div>
+              <span className="broker-status-title">Alpaca sleutels</span>
+              <span className="broker-status-desc">
+                Werk ze bij als je nieuwe sleutels hebt aangemaakt, of als je posities niet zichtbaar zijn.
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="keys-btn" onClick={() => onUpdateKeys('paper')}>
+                Paper sleutels bijwerken
+              </button>
+              <button className="keys-btn live" onClick={() => onUpdateKeys('live')}>
+                Live sleutels bijwerken
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Portfolio's */}
       <h2 className="profile-section-title">Mijn portfolio's</h2>

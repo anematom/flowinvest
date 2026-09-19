@@ -29,7 +29,7 @@ Kies voor "Individual Account" en vul je gegevens in. Dit duurt ongeveer 5 minut
 
 Belangrijk: je begint automatisch met Paper Trading. Dat betekent dat je oefent met nep-geld ($100.000). Er is geen risico.
 
-Tip: dezelfde API-sleutels werken voor zowel Paper Trading als Live Trading. De modus kies je later bij het aanmaken van een portfolio.`,
+Let op: paper en live hebben elk hun eigen sleutels. Een paper-sleutel (begint met PK) werkt niet op je live account en andersom. Zet de schakelaar op Alpaca dus goed voordat je een sleutel aanmaakt.`,
     link: 'https://alpaca.markets',
     linkText: 'Ga naar Alpaca',
   },

@@ -22,6 +22,10 @@ function App() {
   // ingestelde de andere overschreef.
   const [alpacaKeySets, setAlpacaKeySets] = useState({ paper: null, live: null });
   const [showAlpacaSetup, setShowAlpacaSetup] = useState(false);
+  // Welke soort sleutels er wordt ingevoerd. Bij het aanmaken van een
+  // portfolio volgt dat uit onboardingMode; bij het bijwerken vanuit het
+  // profielscherm staat het hier.
+  const [keySetupMode, setKeySetupMode] = useState(null);
 
   const activePortfolio = portfolios[activeIndex] || null;
 
@@ -151,7 +155,7 @@ function App() {
   async function handleAlpacaSetupComplete(keys) {
     // Welke soort sleutels dit zijn volgt uit het portfolio dat wordt
     // aangemaakt. Zonder dat onderscheid overschreef live de paper-sleutels.
-    const soort = onboardingMode?.brokerMode === 'live' ? 'live' : 'paper';
+    const soort = keySetupMode || (onboardingMode?.brokerMode === 'live' ? 'live' : 'paper');
     if (user) {
       try {
         await saveAlpacaKeys(user.id, keys.apiKey, keys.secretKey, soort);
@@ -161,7 +165,19 @@ function App() {
     }
     setAlpacaKeySets(vorige => ({ ...vorige, [soort]: keys }));
     setShowAlpacaSetup(false);
+
+    // Bijwerken vanuit het profiel hoort niet in de onboarding te eindigen.
+    if (keySetupMode) {
+      setKeySetupMode(null);
+      setPage('profile');
+      return;
+    }
     setPage('onboarding');
+  }
+
+  function handleUpdateKeys(mode) {
+    setKeySetupMode(mode);
+    setShowAlpacaSetup(true);
   }
 
   function handleSwitchPortfolio(index) {
@@ -217,8 +233,8 @@ function App() {
   if (showAlpacaSetup) {
     return <AlpacaSetup
       onComplete={handleAlpacaSetupComplete}
-      onCancel={() => { setShowAlpacaSetup(false); setOnboardingMode(null); }}
-      isLive={onboardingMode?.brokerMode === 'live'}
+      onCancel={() => { setShowAlpacaSetup(false); setKeySetupMode(null); if (!keySetupMode) setOnboardingMode(null); else setPage('profile'); }}
+      isLive={keySetupMode ? keySetupMode === 'live' : onboardingMode?.brokerMode === 'live'}
       alreadyConnected={!!(alpacaKeySets.paper || alpacaKeySets.live)}
     />;
   }
@@ -256,6 +272,7 @@ function App() {
         onDeletePortfolio={handleDeletePortfolio}
         onAddPortfolio={handleAddPortfolio}
         onSwitchPortfolio={handleSwitchPortfolio}
+        onUpdateKeys={handleUpdateKeys}
       />
     );
   }
