@@ -27,7 +27,8 @@ const allocations = {
 
 // Indexbeleggen: alles in een wereldwijd gespreid fonds, en verder niets doen.
 //
-// VT bevat ruim 9.000 bedrijven uit ontwikkelde en opkomende markten en weegt
+// VT bevat zo'n 8.000 bedrijven uit 47+ landen, ontwikkeld en opkomend, samen
+// ruim 98% van de wereldwijde beurswaarde. Het fonds weegt ze
 // ze naar grootte. Winnaars groeien er vanzelf in, verliezers verdwijnen —
 // zonder dat er iets verhandeld hoeft te worden.
 //
@@ -41,7 +42,7 @@ const allocations = {
 export const INDEX_FONDS = {
   symbol: 'VT',
   name: 'Wereldwijd indexfonds',
-  description: 'Ruim 9.000 bedrijven wereldwijd — Vanguard Total World',
+  description: 'Ongeveer 8.000 bedrijven in 47+ landen — Vanguard Total World',
 };
 
 export function isIndexMode(riskLevel) {

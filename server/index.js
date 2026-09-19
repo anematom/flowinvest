@@ -87,7 +87,7 @@ const DEFAULT_ETFS = [
   { symbol: 'VXUS', name: 'International ETF', description: 'Internationale markten (ex-US)' },
   { symbol: 'BND', name: 'Total Bond Market', description: 'Obligaties — stabiel en veilig' },
   { symbol: 'VGK', name: 'European Stocks', description: 'Europese aandelen' },
-  { symbol: 'VT', name: 'Wereldwijd indexfonds', description: 'Ruim 9.000 bedrijven wereldwijd — Vanguard Total World' },
+  { symbol: 'VT', name: 'Wereldwijd indexfonds', description: 'Ongeveer 8.000 bedrijven in 47+ landen — Vanguard Total World' },
 ];
 
 // Indexprofiel: alles in een wereldwijd fonds, maandelijks bijkopen, nooit
@@ -1411,7 +1411,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
     //
     // In de backtest kostten stop-loss en trailing stop op een wereldindex
     // 3,9 procentpunt per jaar — acht keer uitstappen in negen jaar. De
-    // spreiding over 9.000 bedrijven is de bescherming; er hoeft niets
+    // spreiding over ~8.000 bedrijven is de bescherming; er hoeft niets
     // omheen. Zie flowinvest-daytrading/index-met-beveiliging.mjs.
     if (risk === 'index') {
       const indexTrades = [];
