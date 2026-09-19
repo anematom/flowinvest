@@ -28,8 +28,8 @@ const allocations = {
 // Indexbeleggen: alles in een wereldwijd gespreid fonds, en verder niets doen.
 //
 // VT bevat zo'n 8.000 bedrijven uit 47+ landen, ontwikkeld en opkomend, samen
-// ruim 98% van de wereldwijde beurswaarde. Het fonds weegt ze
-// ze naar grootte. Winnaars groeien er vanzelf in, verliezers verdwijnen —
+// ruim 98% van de wereldwijde beurswaarde, gewogen naar grootte.
+// Winnaars groeien er vanzelf in, verliezers verdwijnen —
 // zonder dat er iets verhandeld hoeft te worden.
 //
 // Bewust GEEN stop-loss of trailing stop. Backtest 2017-2026 met maandelijkse
