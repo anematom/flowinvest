@@ -1178,6 +1178,59 @@ app.post('/api/alpaca/debug-status', async (req, res) => {
 // positie dubbel kopen.
 const autoTradeRunning = new Set();
 
+// Zoekt op welk profiel er in de app staat ingesteld voor dit account.
+//
+// De app en de cron keken naar verschillende plekken: de app naar het
+// portfolio in Supabase, de cron naar een variabele in GitHub. Wie het in de
+// app omzette zag daardoor niets veranderen aan wat de cron deed. Met
+// risk: 'auto' is de app voortaan leidend.
+//
+// De koppeling loopt via de Alpaca-sleutel: die staat in alpaca_keys met een
+// user_id, en bij die gebruiker hoort een portfolio met een risicoprofiel.
+async function profielUitApp(apiKey, isLive) {
+  try {
+    const kolom = isLive ? 'live_api_key' : 'paper_api_key';
+
+    // Eerst op de gesplitste kolom zoeken, met terugval op de oude kolom.
+    // Bestaan de nieuwe kolommen nog niet, dan geeft Supabase een 400; dat is
+    // geen storing maar simpelweg een database die nog niet is bijgewerkt.
+    const zoek = async (filter) => {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/alpaca_keys?select=user_id&${filter}`,
+        { headers: supabaseStateHeaders() }
+      );
+      if (r.status === 400) return null;
+      if (!r.ok) throw new Error(`alpaca_keys HTTP ${r.status}`);
+      return r.json();
+    };
+
+    let rijen = await zoek(`or=(${kolom}.eq.${apiKey},api_key.eq.${apiKey})`);
+    if (rijen === null) rijen = await zoek(`api_key=eq.${apiKey}`);
+    if (!rijen || !rijen.length) return null;
+
+    const userId = rijen[0].user_id;
+    const modus = isLive ? 'live' : 'paper';
+    const pfRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?select=risk,name&user_id=eq.${userId}&broker_mode=eq.${modus}&order=created_at.asc`,
+      { headers: supabaseStateHeaders() }
+    );
+    if (!pfRes.ok) throw new Error(`profiles HTTP ${pfRes.status}`);
+    const portfolios = await pfRes.json();
+    if (!portfolios.length) return null;
+
+    // Meerdere portfolios in dezelfde modus delen een Alpaca-account; dan is
+    // er geen eenduidig antwoord en laten we de aanroeper beslissen.
+    if (portfolios.length > 1) {
+      console.warn(`Profiel uit app: ${portfolios.length} ${modus}-portfolios gevonden, geen eenduidige keuze`);
+      return null;
+    }
+    return portfolios[0].risk || null;
+  } catch (err) {
+    console.error('Profiel uit app ophalen mislukt:', err.message);
+    return null;
+  }
+}
+
 app.post('/api/alpaca/auto-trade', async (req, res) => {
   let lockKey = null;
   try {
@@ -1188,7 +1241,7 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
       return res.json({ action: 'stopped', reason: 'Noodstop is actief', trades: [] });
     }
 
-    const { risk = 'ultra', amount, alpacaKeys: userKeys } = req.body;
+    let { risk = 'ultra', amount, alpacaKeys: userKeys } = req.body;
 
     // Gebruik user-specifieke keys als beschikbaar
     const useKey = userKeys?.apiKey || ALPACA_KEY;
@@ -1210,6 +1263,23 @@ app.post('/api/alpaca/auto-trade', async (req, res) => {
         skipReason: 'Supabase is onbereikbaar. Zodra dat hersteld is gaat het handelen vanzelf verder.',
         trades: [],
       });
+    }
+
+    // risk 'auto': haal op wat er in de app staat ingesteld. Lukt dat niet,
+    // dan niet gokken maar de ronde overslaan — anders zou hij zomaar met een
+    // ander profiel kunnen gaan handelen dan jij hebt gekozen.
+    if (risk === 'auto') {
+      const uitApp = await profielUitApp(useKey, isLive);
+      if (!uitApp) {
+        return res.json({
+          action: 'skip',
+          reason: 'Profiel niet op te halen uit de app — geen trades deze ronde',
+          skipReason: 'Geen eenduidig portfolio gevonden bij deze Alpaca-sleutel in Supabase.',
+          trades: [],
+        });
+      }
+      console.log(`Auto-trade: profiel uit de app = ${uitApp}`);
+      risk = uitApp;
     }
 
     // Paper en live zijn aparte accounts en mogen elkaar niet blokkeren.

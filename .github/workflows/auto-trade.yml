@@ -15,7 +15,9 @@ name: Auto-trade
 # Benodigde variables (zelfde scherm, tabblad Variables):
 #   TRADING_ENABLED       'true' zet de hele workflow aan (anders doet hij niets)
 #   LIVE_TRADING_ENABLED  'true' zet handelen met echt geld aan
-#   RISK_PROFILE          bijv. 'ultra' (standaard: ultra)
+#   RISK_PROFILE          'auto' (standaard) volgt het profiel dat in de app
+#                         staat ingesteld. Een vaste waarde als 'ultra' of
+#                         'index' overrulet de app.
 #   LIVE_TRADE_AMOUNT     bedrag in dollars; leeg = hele account
 #
 # TRADING_ENABLED is je noodrem. De noodstop in de app zelf staat in het
@@ -45,7 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       API: ${{ vars.API_BASE || 'https://flowinvest.onrender.com' }}
-      RISK: ${{ vars.RISK_PROFILE || 'ultra' }}
+      # 'auto' laat de server het profiel uit de app ophalen, zodat je het
+      # op een plek instelt in plaats van hier en in de app apart.
+      RISK: ${{ vars.RISK_PROFILE || 'auto' }}
 
     steps:
       - name: Controleer of handelen aan staat
