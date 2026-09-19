@@ -183,7 +183,42 @@ export async function addTransaction(userId, tx, portfolioId) {
 }
 
 // ========== Alpaca Keys ==========
-export async function loadAlpacaKeys(userId) {
+// Paper- en live-sleutels stonden allebei in api_key/secret_key, dus wie later
+// paper instelde overschreef zijn live-sleutels. De app probeerde dan met
+// paper-sleutels het live account op te halen, kreeg niets terug en toonde
+// "wachten op storting" terwijl er gewoon posities stonden.
+//
+// Ze staan nu in aparte kolommen. Eenmalig aan te maken in Supabase:
+//   alter table alpaca_keys
+//     add column if not exists paper_api_key text,
+//     add column if not exists paper_secret_key text,
+//     add column if not exists live_api_key text,
+//     add column if not exists live_secret_key text;
+//
+// De oude kolommen blijven staan en worden als terugval gelezen, zodat
+// bestaande gebruikers niets kwijtraken zolang ze hun sleutels niet opnieuw
+// invoeren.
+// Beide sets in een keer, zodat de app bij het wisselen van portfolio niet
+// opnieuw hoeft te laden.
+export async function loadAllAlpacaKeys(userId) {
+  const { data, error } = await supabase
+    .from('alpaca_keys')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  if (!data) return { paper: null, live: null };
+
+  const paar = (apiKey, secretKey) =>
+    (apiKey && secretKey) ? { apiKey, secretKey } : null;
+
+  return {
+    paper: paar(data.paper_api_key ?? data.api_key, data.paper_secret_key ?? data.secret_key),
+    live: paar(data.live_api_key ?? data.api_key, data.live_secret_key ?? data.secret_key),
+  };
+}
+
+export async function loadAlpacaKeys(userId, mode = 'paper') {
   const { data, error } = await supabase
     .from('alpaca_keys')
     .select('*')
@@ -191,16 +226,28 @@ export async function loadAlpacaKeys(userId) {
     .single();
   if (error && error.code !== 'PGRST116') throw error;
   if (!data) return null;
-  return { apiKey: data.api_key, secretKey: data.secret_key };
+
+  const live = mode === 'live';
+  const apiKey = (live ? data.live_api_key : data.paper_api_key) ?? data.api_key;
+  const secretKey = (live ? data.live_secret_key : data.paper_secret_key) ?? data.secret_key;
+  if (!apiKey || !secretKey) return null;
+  return { apiKey, secretKey };
 }
 
-export async function saveAlpacaKeys(userId, apiKey, secretKey) {
+export async function saveAlpacaKeys(userId, apiKey, secretKey, mode = 'paper') {
+  const veld = mode === 'live'
+    ? { live_api_key: apiKey, live_secret_key: secretKey }
+    : { paper_api_key: apiKey, paper_secret_key: secretKey };
+
   const { error } = await supabase
     .from('alpaca_keys')
     .upsert({
       user_id: userId,
+      // De oude kolommen blijven meelopen zodat een oudere versie van de app
+      // niet plotseling zonder sleutels zit.
       api_key: apiKey,
       secret_key: secretKey,
+      ...veld,
     }, { onConflict: 'user_id' });
   if (error) throw error;
 }

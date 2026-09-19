@@ -8,7 +8,7 @@ import Profile from './pages/Profile';
 import AlpacaSetup from './pages/AlpacaSetup';
 import DayTrade from './pages/DayTrade';
 import Calculator from './pages/Calculator';
-import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut, loadAlpacaKeys, saveAlpacaKeys } from './data/supabase';
+import { supabase, loadPortfolios, savePortfolio, deletePortfolio, signOut, loadAllAlpacaKeys, saveAlpacaKeys } from './data/supabase';
 import './App.css';
 
 function App() {
@@ -17,7 +17,10 @@ function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [page, setPage] = useState('loading');
   const [onboardingMode, setOnboardingMode] = useState(null); // { name, brokerMode }
-  const [alpacaKeys, setAlpacaKeys] = useState(null);
+  // Paper en live hebben elk hun eigen sleutels; welke set geldt hangt af van
+  // het actieve portfolio. Eerder deelden ze een plek, waardoor de laatst
+  // ingestelde de andere overschreef.
+  const [alpacaKeySets, setAlpacaKeySets] = useState({ paper: null, live: null });
   const [showAlpacaSetup, setShowAlpacaSetup] = useState(false);
 
   const activePortfolio = portfolios[activeIndex] || null;
@@ -55,9 +58,9 @@ function App() {
       // Laad portfolios en Alpaca keys parallel
       const [data, keys] = await Promise.all([
         loadPortfolios(userId),
-        loadAlpacaKeys(userId).catch(() => null),
+        loadAllAlpacaKeys(userId).catch(() => ({ paper: null, live: null })),
       ]);
-      if (keys) setAlpacaKeys(keys);
+      if (keys) setAlpacaKeySets(keys);
 
       if (data.length > 0) {
         const withMode = data.map(p => ({ broker_mode: 'simulation', ...p }));
@@ -130,7 +133,7 @@ function App() {
 
   function handleAddPortfolio(name, brokerMode, strategy) {
     // Paper trading: check of er keys zijn
-    if (brokerMode === 'paper' && !alpacaKeys) {
+    if (brokerMode === 'paper' && !alpacaKeySets.paper) {
       setOnboardingMode({ name, brokerMode, strategy });
       setShowAlpacaSetup(true);
       return;
@@ -146,14 +149,17 @@ function App() {
   }
 
   async function handleAlpacaSetupComplete(keys) {
+    // Welke soort sleutels dit zijn volgt uit het portfolio dat wordt
+    // aangemaakt. Zonder dat onderscheid overschreef live de paper-sleutels.
+    const soort = onboardingMode?.brokerMode === 'live' ? 'live' : 'paper';
     if (user) {
       try {
-        await saveAlpacaKeys(user.id, keys.apiKey, keys.secretKey);
+        await saveAlpacaKeys(user.id, keys.apiKey, keys.secretKey, soort);
       } catch (err) {
         console.error('Fout bij opslaan Alpaca keys:', err);
       }
     }
-    setAlpacaKeys(keys);
+    setAlpacaKeySets(vorige => ({ ...vorige, [soort]: keys }));
     setShowAlpacaSetup(false);
     setPage('onboarding');
   }
@@ -213,7 +219,7 @@ function App() {
       onComplete={handleAlpacaSetupComplete}
       onCancel={() => { setShowAlpacaSetup(false); setOnboardingMode(null); }}
       isLive={onboardingMode?.brokerMode === 'live'}
-      alreadyConnected={!!alpacaKeys}
+      alreadyConnected={!!(alpacaKeySets.paper || alpacaKeySets.live)}
     />;
   }
 
@@ -243,7 +249,7 @@ function App() {
         user={user}
         portfolios={portfolios}
         activeIndex={activeIndex}
-        alpacaConnected={!!alpacaKeys}
+        alpacaConnected={!!(alpacaKeySets.paper || alpacaKeySets.live)}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         onUpdatePortfolios={setPortfolios}
@@ -261,7 +267,7 @@ function App() {
       portfolios={portfolios}
       activeIndex={activeIndex}
       brokerMode={activePortfolio.broker_mode || 'simulation'}
-      alpacaKeys={alpacaKeys}
+      alpacaKeys={activePortfolio.broker_mode === 'live' ? alpacaKeySets.live : alpacaKeySets.paper}
       onNavigate={handleNavigate}
       onUpdateSettings={handleUpdateSettings}
       onSwitchPortfolio={handleSwitchPortfolio}
