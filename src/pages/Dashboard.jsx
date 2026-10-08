@@ -203,8 +203,13 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         console.error('Auto-trade mislukt:', err);
       }
     }
-    if (dbLoaded) runAutoTrade();
-    const tradeInterval = setInterval(() => { if (dbLoaded) runAutoTrade(); }, 10 * 60 * 1000);
+    // Met echt geld handelt alleen de cron (GitHub Actions), niet de browser.
+    // Anders deed het openen van de app meteen een ronde, nog voordat je
+    // iets aan het profiel kon veranderen, en handelden twee bronnen door
+    // elkaar op hetzelfde account.
+    const browserHandelt = brokerMode !== 'live';
+    if (dbLoaded && browserHandelt) runAutoTrade();
+    const tradeInterval = setInterval(() => { if (dbLoaded && browserHandelt) runAutoTrade(); }, 10 * 60 * 1000);
 
     return () => {
       clearInterval(dataInterval);
