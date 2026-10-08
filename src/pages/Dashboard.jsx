@@ -1262,7 +1262,7 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
             <div className="info-card clickable" onClick={() => setActiveModal('risk')}>
               <span className="info-label">Risico <span className="edit-icon">✎</span></span>
               <span className="info-value">
-                {settings.risk === 'low' ? 'Voorzichtig' : settings.risk === 'medium' ? 'Gebalanceerd' : settings.risk === 'high' ? 'Ambitieus' : settings.risk === 'crypto' ? 'Crypto' : 'Maximaal'}
+                {settings.risk === 'low' ? 'Voorzichtig' : settings.risk === 'medium' ? 'Gebalanceerd' : settings.risk === 'high' ? 'Ambitieus' : settings.risk === 'crypto' ? 'Crypto' : settings.risk === 'index' ? 'Indexfonds' : 'Maximaal'}
               </span>
             </div>
           </>
