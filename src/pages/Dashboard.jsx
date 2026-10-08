@@ -191,7 +191,12 @@ export default function Dashboard({ settings, user, portfolios, activeIndex, bro
         const keysWithMode = alpacaKeys ? { ...alpacaKeys, live: brokerMode === 'live' } : alpacaKeys;
         // Bij live: gebruik Alpaca saldo, niet de inleg uit onboarding
         const tradeAmount = brokerMode === 'live' ? null : settings.amount;
-        const result = await alpacaAutoTrade(settings.risk, tradeAmount, keysWithMode);
+        // Bij live dezelfde regel als de cron: de server zoekt het profiel op
+        // dat bij dit Alpaca-account hoort, en slaat over als dat niet
+        // eenduidig is. Met settings.risk kocht een tweede live portfolio met
+        // een ander profiel aandelen op hetzelfde account zodra je het opende.
+        const tradeRisk = brokerMode === 'live' ? 'auto' : settings.risk;
+        const result = await alpacaAutoTrade(tradeRisk, tradeAmount, keysWithMode);
         setAlpacaTradeResult(result);
         loadAlpaca(); // Herlaad data na trades
       } catch (err) {
